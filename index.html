@@ -170,7 +170,6 @@
 </div>
 
 <script>
-  // 🔴 請將此處替換為您第一步取得的 Google Apps Script Web App URL
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
 
   let groupedMenu = {};
@@ -323,8 +322,10 @@
 
     const payload = { name, phone, bagFlavors, items: cart, totalPrice };
 
+    // 🔧 修正關鍵：改用 text/plain 繞過 CORS 預檢限制
     fetch(GAS_WEB_APP_URL, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     })
     .then(res => res.json())
@@ -335,11 +336,13 @@
       } else {
         alert('下單失敗：' + res.error);
         submitBtn.disabled = false;
+        submitBtn.innerText = '💛 確認送出訂單 💛';
       }
     })
     .catch(err => {
-      alert('網路連線失敗，請稍後再試。');
+      alert('連線失敗，請確認 Google Apps Script 權限已設定為「所有人 (Anyone)」。');
       submitBtn.disabled = false;
+      submitBtn.innerText = '💛 確認送出訂單 💛';
     });
   }
 </script>
