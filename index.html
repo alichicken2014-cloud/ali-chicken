@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>阿力香雞排-崑山店</title>
+  <!-- 載入 LINE LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     :root {
       --bg-color: #fdfbf2;
@@ -171,7 +173,9 @@
 
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
+  const MY_LIFF_ID = "2011275617-pbLFxXtP";
 
+  let userLineUid = '';
   let groupedMenu = {};
   let categories = ['全部'];
   let currentCategory = '全部';
@@ -180,6 +184,19 @@
   let currentQty = 1;
 
   window.onload = function() {
+    // 1. 初始化 LIFF 取得顧客 LINE 資料
+    liff.init({ liffId: MY_LIFF_ID }).then(() => {
+      if (liff.isLoggedIn()) {
+        liff.getProfile().then(profile => {
+          userLineUid = profile.userId;
+          document.getElementById('custName').value = profile.displayName;
+        });
+      } else {
+        liff.login();
+      }
+    }).catch(err => console.log('LIFF 初始化（非 LINE 環境）：', err));
+
+    // 2. 載入菜單
     fetch(GAS_WEB_APP_URL)
       .then(res => res.json())
       .then(data => processMenu(data))
@@ -320,9 +337,15 @@
     submitBtn.disabled = true;
     submitBtn.innerText = '訂單傳送中...';
 
-    const payload = { name, phone, bagFlavors, items: cart, totalPrice };
+    const payload = { 
+      name, 
+      phone, 
+      bagFlavors, 
+      items: cart, 
+      totalPrice,
+      lineUid: userLineUid
+    };
 
-    // 🔧 修正關鍵：改用 text/plain 繞過 CORS 預檢限制
     fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -332,7 +355,11 @@
     .then(res => {
       if (res.success) {
         alert(`🎉 下單成功！您的取單號為 ${res.orderNo}`);
-        location.reload();
+        if (liff.isInClient()) {
+          liff.closeWindow(); // 若在 LINE 內部打開，下單完自動關閉頁面
+        } else {
+          location.reload();
+        }
       } else {
         alert('下單失敗：' + res.error);
         submitBtn.disabled = false;
@@ -340,7 +367,7 @@
       }
     })
     .catch(err => {
-      alert('連線失敗，請確認 Google Apps Script 權限已設定為「所有人 (Anyone)」。');
+      alert('連線失敗，請稍後再試。');
       submitBtn.disabled = false;
       submitBtn.innerText = '💛 確認送出訂單 💛';
     });
