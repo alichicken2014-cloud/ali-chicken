@@ -3,299 +3,377 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>阿力香雞排 - 崑山店線上點餐</title>
-  <!-- LIFF SDK -->
+  <title>阿力香雞排-崑山店</title>
+  <!-- 載入 LINE LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     :root {
-      --primary-color: #e63946;
-      --secondary-color: #f1faee;
-      --accent-color: #a8dadc;
-      --dark-color: #1d3557;
+      --bg-color: #fdfbf2;
+      --card-bg: #ffffff;
+      --primary-color: #f39c12;
+      --secondary-color: #e67e22;
+      --accent-color: #27ae60;
+      --border-color: #f1c40f;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f8f9fa;
-      color: #333;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      margin: 0; padding: 12px; color: #444;
     }
-    header {
-      background-color: var(--primary-color);
-      color: white;
-      text-align: center;
-      padding: 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    header h1 { margin: 0; font-size: 1.5rem; }
     .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 1rem;
-      padding-bottom: 100px;
+      max-width: 500px; margin: 0 auto;
+      background: var(--card-bg);
+      border: 4px dashed var(--border-color);
+      border-radius: 25px; padding: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
     }
-    .user-info {
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    .header { text-align: center; margin-bottom: 12px; }
+    .header h1 {
+      margin: 5px 0; color: #d35400; font-size: 22px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
     }
-    .form-group {
-      margin-bottom: 0.8rem;
+    .chicken-badge {
+      background: #fef9e7; color: var(--secondary-color);
+      padding: 4px 12px; border-radius: 15px; font-size: 13px; font-weight: bold;
     }
-    .form-group label {
-      display: block;
-      margin-bottom: 0.3rem;
-      font-weight: bold;
-      font-size: 0.9rem;
+    .section-title {
+      font-size: 15px; font-weight: bold; color: #d35400;
+      margin: 12px 0 8px 0; display: flex; align-items: center; gap: 5px;
     }
-    .form-group input {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      box-sizing: border-box;
+    .bag-box { background: #fcf3cf; border-radius: 16px; padding: 12px; margin-bottom: 15px; }
+    .option-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+    .opt-btn {
+      background: white; border: 1.5px solid #f39c12; padding: 6px 12px;
+      border-radius: 12px; font-size: 13px; cursor: pointer; user-select: none;
     }
-    .menu-section {
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    .opt-btn input { display: none; }
+    .opt-btn.active { background: #f39c12; color: white; font-weight: bold; }
+    .tab-scroll {
+      display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 12px;
+      scrollbar-width: none;
     }
-    .menu-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.8rem 0;
-      border-bottom: 1px solid #eee;
+    .tab-scroll::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      background: #fff8e7; border: 2px solid #f9e79f; padding: 10px 18px;
+      border-radius: 25px; font-size: 16px; font-weight: bold; color: #d35400;
+      white-space: nowrap; cursor: pointer; transition: all 0.2s;
     }
-    .menu-item:last-child { border-bottom: none; }
-    .item-detail h3 { margin: 0 0 0.2rem 0; font-size: 1.1rem; }
-    .item-detail p { margin: 0; color: #666; font-size: 0.9rem; }
-    .item-controls {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+    .tab-btn.active { background: #d35400; color: white; border-color: #d35400; box-shadow: 0 4px 8px rgba(211,84,0,0.2); }
+    .grid-menu { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; min-height: 150px; }
+    .grid-card {
+      background: #fff8e7; border: 2px solid #f9e79f; border-radius: 16px;
+      padding: 12px; text-align: center; cursor: pointer; transition: transform 0.1s; position: relative;
     }
-    .btn-qty {
-      background: var(--accent-color);
-      border: none;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      font-weight: bold;
-      cursor: pointer;
+    .grid-card:active { transform: scale(0.97); }
+    .card-title { font-weight: bold; font-size: 15px; color: #333; margin-bottom: 4px; }
+    .card-price { color: #e67e22; font-weight: bold; font-size: 14px; }
+    .badge-count {
+      position: absolute; top: -6px; right: -6px; background: #27ae60;
+      color: white; border-radius: 50%; width: 22px; height: 22px;
+      font-size: 12px; line-height: 22px; font-weight: bold;
     }
-    .cart-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      padding: 1rem;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 600px;
-      margin: 0 auto;
-      box-sizing: border-box;
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 99;
     }
-    .btn-submit {
-      background: var(--primary-color);
-      color: white;
-      border: none;
-      padding: 0.8rem 1.5rem;
-      border-radius: 25px;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
+    .modal-content {
+      background: white; width: 85%; max-width: 360px; border-radius: 20px;
+      padding: 20px; border: 3px solid var(--border-color);
     }
-    .btn-submit:disabled {
-      background: #ccc;
-      cursor: not-allowed;
+    .modal-header { font-size: 18px; font-weight: bold; text-align: center; color: #d35400; margin-bottom: 12px; }
+    .modal-row { margin-bottom: 12px; }
+    .btn-grid-select { display: inline-block; padding: 6px 12px; margin: 3px; border-radius: 10px; border: 1px solid #ccc; font-size: 13px; cursor: pointer; }
+    .btn-grid-select.selected { background: #f39c12; color: white; border-color: #f39c12; }
+    .qty-ctrl { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; }
+    .btn-circle { width: 32px; height: 32px; border-radius: 50%; border: none; background: #f39c12; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
+    .footer { background: #fff; border-top: 2px dashed var(--border-color); padding-top: 12px; margin-top: 15px; }
+    .input-label { font-size: 15px; font-weight: bold; color: #d35400; margin: 8px 0 4px 0; display: block; }
+    .input-box-large {
+      width: 100%; height: 48px; padding: 10px 14px; box-sizing: border-box;
+      border: 2px solid #f39c12; border-radius: 12px; margin-bottom: 8px;
+      font-size: 16px; font-weight: bold; color: #333; outline: none;
     }
+    .btn-submit { width: 100%; height: 50px; background: #27ae60; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 15px; cursor: pointer; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>🍗 阿力香雞排 - 崑山店</h1>
-  </header>
+<div class="container">
+  <div class="header">
+    <span class="chicken-badge">🐥 現點現炸 酥脆美味 🥤</span>
+    <h1>🐥 阿力香雞排 崑山店 🍟</h1>
+  </div>
 
-  <div class="container">
-    <!-- 訂購人資訊 -->
-    <div class="user-info">
-      <div class="form-group">
-        <label for="userName">訂購人姓名：</label>
-        <input type="text" id="userName" placeholder="載入中..." required>
-      </div>
-      <div class="form-group">
-        <label for="userPhone">聯絡電話：</label>
-        <input type="tel" id="userPhone" placeholder="請輸入手機號碼" required>
-      </div>
+  <div class="bag-box">
+    <div class="section-title" style="margin-top:0;">🧂 整包辣度調味（必選）：</div>
+    <div class="option-group" id="mainFlavorGroup">
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="胡椒" onclick="selectSingleOpt(this)">胡椒</label>
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="小辣" onclick="selectSingleOpt(this)">小辣</label>
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="中辣" onclick="selectSingleOpt(this)">中辣</label>
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="大辣" onclick="selectSingleOpt(this)">大辣</label>
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="都不加" onclick="selectSingleOpt(this)">都不加</label>
     </div>
 
-    <!-- 菜單列表 -->
-    <div class="menu-section">
-      <h2>餐點菜單</h2>
-      
-      <div class="menu-item">
-        <div class="item-detail">
-          <h3>香雞排</h3>
-          <p>$75</p>
-        </div>
-        <div class="item-controls">
-          <button class="btn-qty" onclick="updateQty('chicken', -1)">-</button>
-          <span id="qty-chicken">0</span>
-          <button class="btn-qty" onclick="updateQty('chicken', 1)">+</button>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-detail">
-          <h3>鹽酥雞</h3>
-          <p>$50</p>
-        </div>
-        <div class="item-controls">
-          <button class="btn-qty" onclick="updateQty('popcorn', -1)">-</button>
-          <span id="qty-popcorn">0</span>
-          <button class="btn-qty" onclick="updateQty('popcorn', 1)">+</button>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-detail">
-          <h3>甜不辣</h3>
-          <p>$30</p>
-        </div>
-        <div class="item-controls">
-          <button class="btn-qty" onclick="updateQty('tempura', -1)">-</button>
-          <span id="qty-tempura">0</span>
-          <button class="btn-qty" onclick="updateQty('tempura', 1)">+</button>
-        </div>
-      </div>
+    <div class="section-title">🌿 特殊偏好：</div>
+    <div class="option-group">
+      <label class="opt-btn" id="lbl_basil"><input type="checkbox" id="chk_basil" value="不要九層塔" onchange="toggleMultiOpt(this)">不要九層塔 🌿</label>
     </div>
   </div>
 
-  <!-- 底部結帳列 -->
-  <div class="cart-bar">
-    <div>
-      <span>總金額：</span>
-      <strong id="totalPrice" style="color: var(--primary-color); font-size: 1.2rem;">$0</strong>
+  <div class="tab-scroll" id="categoryTabs"></div>
+  <div class="grid-menu" id="gridMenu">載入菜單中...</div>
+
+  <div class="footer">
+    <label class="input-label" for="custName">👤 訂購人：</label>
+    <input type="text" id="custName" class="input-box-large" placeholder="請輸入姓名 (必填)" required>
+    
+    <label class="input-label" for="custPhone">📞 電話：</label>
+    <input type="tel" id="custPhone" class="input-box-large" placeholder="請輸入聯絡電話 (必填)" maxlength="10" required>
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin: 12px 0; font-weight:bold;">
+      <span style="font-size:16px;">總計金額：</span>
+      <span style="color:#e67e22; font-size:24px;" id="totalDisplay">$0</span>
     </div>
-    <button id="submitBtn" class="btn-submit" onclick="submitOrder()">送出訂單</button>
+    <button class="btn-submit" onclick="submitOrderData()">💛 確認送出訂單 💛</button>
   </div>
+</div>
 
-  <script>
-    // 綁定全新的 LIFF ID
-    const LIFF_ID = "2011276802-mdrsLFND";
-    // 您的 Google Apps Script Web App 網址
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwyU9DlydE3UAtM56uR0KAtI-2fInh9p-M4QYyv3M8sT4_s9Z9q2P2-mZ2d_9R0Z-N-/exec"; 
+<div class="modal-overlay" id="itemModal">
+  <div class="modal-content">
+    <div class="modal-header" id="modalItemName">商品名稱</div>
+    <div class="modal-row" id="portionArea">
+      <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">選擇大小/份量：</div>
+      <div id="portionOptions"></div>
+    </div>
+    <div id="chickenCustomArea" style="display:none; background:#fffdf5; padding:8px; border-radius:10px; margin-bottom:10px;">
+      <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">雞排切法：</div>
+      <div id="cutOptions">
+        <span class="btn-grid-select selected" onclick="selectBtnGroup(this, 'cut')">要切</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'cut')">不切</span>
+      </div>
+      <div style="font-size:13px; font-weight:bold; margin:6px 0 4px 0;">個別辣度：</div>
+      <div id="spicyOptions">
+        <span class="btn-grid-select selected" onclick="selectBtnGroup(this, 'spicy')">隨整包</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">胡椒</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">小辣</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">中辣</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">大辣</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">都不加</span>
+      </div>
+    </div>
+    <div class="qty-ctrl">
+      <button class="btn-circle" onclick="changeModalQty(-1)">-</button>
+      <span style="font-weight:bold; font-size:18px;" id="modalQty">1</span>
+      <button class="btn-circle" onclick="changeModalQty(1)">+</button>
+    </div>
+    <button class="btn-submit" style="background:#f39c12; height:44px; font-size:16px;" onclick="saveItemToCart()">加入購物車</button>
+    <button style="width:100%; border:none; background:none; color:#888; margin-top:8px; cursor:pointer;" onclick="closeModal()">取消</button>
+  </div>
+</div>
 
-    let userLineUid = "";
-    const items = {
-      chicken: { name: "香雞排", price: 75, qty: 0 },
-      popcorn: { name: "鹽酥雞", price: 50, qty: 0 },
-      tempura: { name: "甜不辣", price: 30, qty: 0 }
+<script>
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
+  // 已更新為同 Provider 下的全新 LIFF ID
+  const MY_LIFF_ID = "2011276802-mdrsLFND";
+
+  let userLineUid = '';
+  let groupedMenu = {};
+  let categories = ['全部'];
+  let currentCategory = '全部';
+  let cart = [];
+  let currentItemName = '';
+  let currentQty = 1;
+
+  window.onload = function() {
+    // 1. 初始化 LIFF 取得顧客 LINE 資料
+    liff.init({ liffId: MY_LIFF_ID }).then(() => {
+      if (liff.isLoggedIn()) {
+        liff.getProfile().then(profile => {
+          userLineUid = profile.userId;
+          document.getElementById('custName').value = profile.displayName;
+        });
+      } else {
+        liff.login();
+      }
+    }).catch(err => console.log('LIFF 初始化（非 LINE 環境）：', err));
+
+    // 2. 載入菜單
+    fetch(GAS_WEB_APP_URL)
+      .then(res => res.json())
+      .then(data => processMenu(data))
+      .catch(err => {
+        document.getElementById('gridMenu').innerText = "菜單載入失敗，請重新整理。";
+      });
+  };
+
+  function selectSingleOpt(el) {
+    document.querySelectorAll('#mainFlavorGroup .opt-btn').forEach(b => b.classList.remove('active'));
+    el.parentElement.classList.add('active');
+  }
+
+  function toggleMultiOpt(el) {
+    el.parentElement.classList.toggle('active', el.checked);
+  }
+
+  function processMenu(data) {
+    groupedMenu = {};
+    categories = ['全部'];
+
+    data.forEach(item => {
+      let cat = item.category;
+      if (!categories.includes(cat)) categories.push(cat);
+
+      if (!groupedMenu[item.name]) {
+        groupedMenu[item.name] = { category: cat, portions: [] };
+      }
+      groupedMenu[item.name].portions.push(item);
+    });
+
+    renderCategoryTabs();
+    renderGrid();
+  }
+
+  function renderCategoryTabs() {
+    let html = '';
+    categories.forEach(cat => {
+      html += `<div class="tab-btn ${cat === currentCategory ? 'active' : ''}" onclick="switchCategory('${cat}')">${cat}</div>`;
+    });
+    document.getElementById('categoryTabs').innerHTML = html;
+  }
+
+  function switchCategory(cat) {
+    currentCategory = cat;
+    renderCategoryTabs();
+    renderGrid();
+  }
+
+  function renderGrid() {
+    let html = '';
+    for (let name in groupedMenu) {
+      const itemGroup = groupedMenu[name];
+      if (currentCategory !== '全部' && itemGroup.category !== currentCategory) continue;
+
+      const minPrice = Math.min(...itemGroup.portions.map(p => p.price));
+      const count = cart.filter(c => c.name === name).reduce((sum, c) => sum + c.qty, 0);
+
+      html += `
+        <div class="grid-card" onclick="openModal('${name}')">
+          ${count > 0 ? `<div class="badge-count">${count}</div>` : ''}
+          <div class="card-title">${name}</div>
+          <div class="card-price">$${minPrice}${itemGroup.portions.length > 1 ? ' 起' : ''}</div>
+        </div>
+      `;
+    }
+    document.getElementById('gridMenu').innerHTML = html || '<div style="grid-column: span 2; text-align:center; color:#999; padding:20px;">此分類無商品</div>';
+  }
+
+  function openModal(name) {
+    currentItemName = name;
+    currentQty = 1;
+    document.getElementById('modalItemName').innerText = name;
+    document.getElementById('modalQty').innerText = currentQty;
+
+    const portions = groupedMenu[name].portions;
+    let portionHtml = '';
+    portions.forEach((p, idx) => {
+      portionHtml += `<span class="btn-grid-select ${idx === 0 ? 'selected' : ''}" data-price="${p.price}" data-portion="${p.portion}" onclick="selectBtnGroup(this, 'portion')">${p.portion} ($${p.price})</span>`;
+    });
+    document.getElementById('portionOptions').innerHTML = portionHtml;
+    document.getElementById('chickenCustomArea').style.display = name.includes('雞排') ? 'block' : 'none';
+    document.getElementById('itemModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('itemModal').style.display = 'none';
+  }
+
+  function selectBtnGroup(el, groupType) {
+    el.parentElement.querySelectorAll('.btn-grid-select').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function changeModalQty(delta) {
+    currentQty = Math.max(1, currentQty + delta);
+    document.getElementById('modalQty').innerText = currentQty;
+  }
+
+  function saveItemToCart() {
+    const selectedPortionEl = document.querySelector('#portionOptions .selected');
+    const portion = selectedPortionEl.getAttribute('data-portion');
+    const price = Number(selectedPortionEl.getAttribute('data-price'));
+
+    let note = '';
+    if (currentItemName.includes('雞排')) {
+      const cut = document.querySelector('#cutOptions .selected').innerText;
+      const spicy = document.querySelector('#spicyOptions .selected').innerText;
+      note = `${cut}/${spicy}`;
+    }
+
+    cart.push({ name: currentItemName, portion: portion, price: price, qty: currentQty, note: note });
+    closeModal();
+    renderGrid();
+    calculateTotal();
+  }
+
+  function calculateTotal() {
+    let total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    document.getElementById('totalDisplay').innerText = '$' + total;
+  }
+
+  function submitOrderData() {
+    const selectedFlavor = document.querySelector('input[name="mainFlavor"]:checked');
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+
+    if (!selectedFlavor) { alert('請點選【整包辣度調味】！'); return; }
+    if (!name) { alert('請填寫【訂購人姓名】！'); return; }
+    if (!phone) { alert('請填寫【電話】！'); return; }
+    if (cart.length === 0) { alert('購物車是空的，請至少點選一項餐點！'); return; }
+
+    let bagFlavors = [selectedFlavor.value];
+    if (document.getElementById('chk_basil').checked) bagFlavors.push('不要九層塔');
+
+    let totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const submitBtn = document.querySelector('.btn-submit');
+    submitBtn.disabled = true;
+    submitBtn.innerText = '訂單傳送中...';
+
+    const payload = { 
+      name, 
+      phone, 
+      bagFlavors, 
+      items: cart, 
+      totalPrice,
+      lineUid: userLineUid
     };
 
-    // 初始化 LIFF
-    async function initLiff() {
-      try {
-        await liff.init({ liffId: LIFF_ID });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          userLineUid = profile.userId;
-          document.getElementById('userName').value = profile.displayName || "";
-        } else {
-          liff.login();
-        }
-      } catch (err) {
-        console.error("LIFF 初始化失敗", err);
-      }
-    }
-
-    // 增減數量
-    function updateQty(itemId, delta) {
-      if (items[itemId].qty + delta >= 0) {
-        items[itemId].qty += delta;
-        document.getElementById(`qty-${itemId}`).innerText = items[itemId].qty;
-        calculateTotal();
-      }
-    }
-
-    // 計算總價
-    function calculateTotal() {
-      let total = 0;
-      for (const key in items) {
-        total += items[key].price * items[key].qty;
-      }
-      document.getElementById('totalPrice').innerText = `$${total}`;
-      return total;
-    }
-
-    // 送出訂單
-    async function submitOrder() {
-      const name = document.getElementById('userName').value.trim();
-      const phone = document.getElementById('userPhone').value.trim();
-      const total = calculateTotal();
-
-      if (!name || !phone) {
-        alert("請完整填寫姓名與電話！");
-        return;
-      }
-      if (total === 0) {
-        alert("請至少選擇一項餐點！");
-        return;
-      }
-
-      // 組合餐點明細文字
-      let orderItemsText = [];
-      for (const key in items) {
-        if (items[key].qty > 0) {
-          orderItemsText.push(`${items[key].name} x${items[key].qty}`);
-        }
-      }
-
-      const orderData = {
-        lineUid: userLineUid,
-        name: name,
-        phone: phone,
-        totalPrice: total,
-        items: orderItemsText.join("、")
-      };
-
-      const submitBtn = document.getElementById('submitBtn');
-      submitBtn.disabled = true;
-      submitBtn.innerText = "處理中...";
-
-      try {
-        await fetch(GAS_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData)
-        });
-
-        alert("訂單已送出成功！");
+    fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert(`🎉 下單成功！您的取單號為 ${res.orderNo}`);
         if (liff.isInClient()) {
-          liff.closeWindow();
+          liff.closeWindow(); // 若在 LINE 內部打開，下單完自動關閉頁面
+        } else {
+          location.reload();
         }
-      } catch (err) {
-        alert("下單失敗，請重試！");
-        console.error(err);
-      } finally {
+      } else {
+        alert('下單失敗：' + res.error);
         submitBtn.disabled = false;
-        submitBtn.innerText = "送出訂單";
+        submitBtn.innerText = '💛 確認送出訂單 💛';
       }
-    }
+    })
+    .catch(err => {
+      alert('連線失敗，請稍後再試。');
+      submitBtn.disabled = false;
+      submitBtn.innerText = '💛 確認送出訂單 💛';
+    });
+  }
+</script>
 
-    window.onload = initLiff;
-  </script>
 </body>
 </html>
