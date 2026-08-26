@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>阿力香雞排-崑山店</title>
-  <!-- 載入 LINE LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     :root {
@@ -173,7 +172,6 @@
 
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
-  // 已更新為同 Provider 下的全新 LIFF ID
   const MY_LIFF_ID = "2011276802-mdrsLFND";
 
   let userLineUid = '';
@@ -185,7 +183,6 @@
   let currentQty = 1;
 
   window.onload = function() {
-    // 1. 初始化 LIFF 取得顧客 LINE 資料
     liff.init({ liffId: MY_LIFF_ID }).then(() => {
       if (liff.isLoggedIn()) {
         liff.getProfile().then(profile => {
@@ -195,12 +192,29 @@
       } else {
         liff.login();
       }
-    }).catch(err => console.log('LIFF 初始化（非 LINE 環境）：', err));
+    }).catch(err => console.log('LIFF 初始化：', err));
 
-    // 2. 載入菜單
+    // 載入菜單並檢查營業狀態
     fetch(GAS_WEB_APP_URL)
       .then(res => res.json())
-      .then(data => processMenu(data))
+      .then(resData => {
+        if (!resData.isOpen) {
+          alert(resData.closeReason); // 跳出視窗告知顧客
+          const submitBtn = document.querySelector('.btn-submit');
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.background = '#ccc';
+            submitBtn.innerText = '🚫 目前非營業/點餐時間';
+          }
+          document.getElementById('gridMenu').innerHTML = `
+            <div style="grid-column: span 2; text-align: center; padding: 40px 10px; color: #e74c3c; font-weight: bold; font-size: 18px; line-height: 1.6;">
+              ${resData.closeReason.replace(/\n/g, '<br>')}
+            </div>
+          `;
+        } else {
+          processMenu(resData.menu || resData);
+        }
+      })
       .catch(err => {
         document.getElementById('gridMenu').innerText = "菜單載入失敗，請重新整理。";
       });
@@ -357,7 +371,7 @@
       if (res.success) {
         alert(`🎉 下單成功！您的取單號為 ${res.orderNo}`);
         if (liff.isInClient()) {
-          liff.closeWindow(); // 若在 LINE 內部打開，下單完自動關閉頁面
+          liff.closeWindow();
         } else {
           location.reload();
         }
