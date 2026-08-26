@@ -8,6 +8,9 @@
     body { font-family: -apple-system, sans-serif; background: #2c3e50; color: white; margin: 0; padding: 20px; }
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #34495e; padding-bottom: 10px; margin-bottom: 20px; }
     .status-badge { background: #27ae60; padding: 6px 16px; border-radius: 20px; font-weight: bold; }
+    .btn-toggle { padding: 8px 16px; border: none; border-radius: 20px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; margin-left: 10px; transition: 0.2s; }
+    .btn-open { background: #27ae60; }
+    .btn-close { background: #e74c3c; }
     .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
     .order-card { background: #fff; color: #333; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-top: 6px solid #e67e22; }
     .order-card.new { animation: blink 1s infinite alternate; border-top-color: #e74c3c; }
@@ -23,9 +26,10 @@
 
 <div class="header">
   <h2>🍗 阿力香雞排 - 廚房接單看板</h2>
-  <div>
-    <span class="status-badge" id="soundStatus">🗣️ 語音已準備</span>
-    <button onclick="speakNewOrder()" style="padding: 6px 12px; margin-left: 10px; cursor: pointer; font-weight: bold;">🔊 測試語音提示</button>
+  <div style="display: flex; align-items: center;">
+    <span class="status-badge" id="soundStatus">🗣️ 語音監控中</span>
+    <button id="toggleBtn" class="btn-toggle btn-open" onclick="toggleShopStatus()">🟢 營業中 (點擊改公休)</button>
+    <button onclick="speakNewOrder()" style="padding: 6px 12px; margin-left: 10px; cursor: pointer; font-weight: bold;">🔊 測試語音</button>
   </div>
 </div>
 
@@ -36,36 +40,33 @@
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
   let knownOrders = new Set();
+  let currentShopStatus = "正常";
 
-  // 播放「你有新訂單」語音功能
   function speakNewOrder() {
     if ('speechSynthesis' in window) {
-      // 停止先前未唸完的語音
       window.speechSynthesis.cancel();
-
       const msg = new SpeechSynthesisUtterance("你有新訂單");
-      msg.lang = "zh-TW"; // 繁體中文
-      msg.rate = 1.0;     // 語速
-      msg.pitch = 1.1;    // 音調
-      msg.volume = 1.0;   // 音量最大
-
+      msg.lang = "zh-TW";
+      msg.rate = 1.0;
+      msg.volume = 1.0;
       window.speechSynthesis.speak(msg);
-      document.getElementById('soundStatus').innerText = "🗣️ 語音監控中";
-    } else {
-      alert("您的瀏覽器不支援語音合成，請使用 Chrome 或 Edge 瀏覽器。");
     }
   }
 
   function fetchOrders() {
     fetch(GAS_WEB_APP_URL + "?action=getLiveOrders")
       .then(res => res.json())
-      .then(orders => {
+      .then(resData => {
+        const orders = resData.orders || [];
+        currentShopStatus = resData.shopStatus || "正常";
+        updateToggleBtnUI();
+
         let gridHtml = '';
         let hasNew = false;
 
         orders.forEach(ord => {
           if (!knownOrders.has(ord.orderNo)) {
-            if (knownOrders.size > 0) hasNew = true; // 發現新訂單
+            if (knownOrders.size > 0) hasNew = true;
             knownOrders.add(ord.orderNo);
           }
 
@@ -85,13 +86,35 @@
         });
 
         document.getElementById('orderGrid').innerHTML = gridHtml || '<div style="color: #bdc3c7;">目前尚無新訂單</div>';
-        
-        // 抓到新訂單時觸發語音
-        if (hasNew) {
-          speakNewOrder();
-        }
+        if (hasNew) speakNewOrder();
       })
       .catch(err => console.log(err));
+  }
+
+  function toggleShopStatus() {
+    const targetStatus = currentShopStatus === "正常" ? "公休" : "正常";
+    if (confirm(`確定要將系統切換為【${targetStatus === "公休" ? "臨時公休" : "正常營業"}】嗎？`)) {
+      fetch(`${GAS_WEB_APP_URL}?action=toggleStatus&status=${encodeURIComponent(targetStatus)}`)
+        .then(res => res.json())
+        .then(res => {
+          if (res.success) {
+            currentShopStatus = res.status;
+            updateToggleBtnUI();
+            alert(`已切換為：${currentShopStatus === "公休" ? "臨時公休" : "正常營業"}`);
+          }
+        });
+    }
+  }
+
+  function updateToggleBtnUI() {
+    const btn = document.getElementById('toggleBtn');
+    if (currentShopStatus === "公休") {
+      btn.className = "btn-toggle btn-close";
+      btn.innerText = "🔴 臨時公休中 (點擊開啟)";
+    } else {
+      btn.className = "btn-toggle btn-open";
+      btn.innerText = "🟢 營業中 (點擊改公休)";
+    }
   }
 
   function printCard(no, time, name, phone, items, total) {
@@ -127,7 +150,6 @@
     printWin.close();
   }
 
-  // 第一次載入與每 8 秒自動輪詢
   fetchOrders();
   setInterval(fetchOrders, 8000);
 </script>
