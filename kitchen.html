@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>【阿力香雞排】廚房即時接單看板</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; background: #2c3e50; color: white; margin: 0; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #34495e; padding-bottom: 10px; margin-bottom: 20px; }
+    .status-badge { background: #27ae60; padding: 6px 16px; border-radius: 20px; font-weight: bold; }
+    .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+    .order-card { background: #fff; color: #333; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-top: 6px solid #e67e22; }
+    .order-card.new { animation: blink 1s infinite alternate; border-top-color: #e74c3c; }
+    @keyframes blink { from { box-shadow: 0 0 5px #e74c3c; } to { box-shadow: 0 0 20px #e74c3c; } }
+    .order-no { font-size: 24px; font-weight: bold; color: #d35400; display: flex; justify-content: space-between; }
+    .cust-info { font-size: 14px; color: #7f8c8d; margin: 8px 0; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
+    .items-box { font-size: 16px; white-space: pre-line; font-weight: bold; line-height: 1.5; margin-bottom: 12px; }
+    .btn-action { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn-print { background: #3498db; color: white; margin-bottom: 6px; }
+    .btn-done { background: #27ae60; color: white; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h2>🍗 阿力香雞排 - 廚房接單看板</h2>
+  <div>
+    <span class="status-badge" id="soundStatus">🔊 聲音已準備</span>
+    <button onclick="enableSound()" style="padding: 6px 12px; margin-left: 10px; cursor: pointer;">點我測試聲音</button>
+  </div>
+</div>
+
+<div class="order-grid" id="orderGrid">
+  <div style="color: #bdc3c7;">正在連線訂單系統...</div>
+</div>
+
+<script>
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec"; // 您的 GAS 網址
+  let knownOrders = new Set();
+  let audioCtx = null;
+
+  function enableSound() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    playBeep();
+    document.getElementById('soundStatus').innerText = "🔊 聲音監控中";
+  }
+
+  function playBeep() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime); // 嗶聲音高
+    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.5); // 嗶 0.5 秒
+  }
+
+  function fetchOrders() {
+    fetch(GAS_WEB_APP_URL + "?action=getLiveOrders")
+      .then(res => res.json())
+      .then(orders => {
+        let gridHtml = '';
+        let hasNew = false;
+
+        orders.forEach(ord => {
+          if (!knownOrders.has(ord.orderNo)) {
+            if (knownOrders.size > 0) hasNew = true; // 有新訂單跳出
+            knownOrders.add(ord.orderNo);
+          }
+
+          gridHtml += `
+            <div class="order-card ${ord.status === '已下單' ? 'new' : ''}">
+              <div class="order-no">
+                <span>${ord.orderNo}</span>
+                <span style="font-size: 18px; color:#27ae60;">$${ord.totalPrice}</span>
+              </div>
+              <div class="cust-info">
+                ⏰ ${ord.time.substring(11, 16)} | 👤 ${ord.name} (${ord.phone})
+              </div>
+              <div class="items-box">${ord.items}</div>
+              <button class="btn-action btn-print" onclick="printCard('${ord.orderNo}', '${ord.time}', '${ord.name}', '${ord.phone}', \`${ord.items}\`, ${ord.totalPrice})">🖨️ 列印單據</button>
+            </div>
+          `;
+        });
+
+        document.getElementById('orderGrid').innerHTML = gridHtml || '<div style="color: #bdc3c7;">目前尚無新訂單</div>';
+        
+        if (hasNew) {
+          playBeep();
+        }
+      })
+      .catch(err => console.log(err));
+  }
+
+  function printCard(no, time, name, phone, items, total) {
+    const printWin = window.open('', '', 'width=400,height=600');
+    printWin.document.write(`
+      <html>
+        <head>
+          <title>訂單 ${no}</title>
+          <style>
+            body { font-family: monospace; padding: 10px; width: 250px; }
+            .title { font-size: 18px; font-weight: bold; text-align: center; }
+            .line { border-bottom: 1px dashed #000; margin: 8px 0; }
+            .items { font-size: 14px; white-space: pre-line; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="title">阿力香雞排 (崑山店)</div>
+          <div class="title" style="font-size:24px;">${no}</div>
+          <div class="line"></div>
+          <div>時間: ${time}</div>
+          <div>姓名: ${name}</div>
+          <div>電話: ${phone}</div>
+          <div class="line"></div>
+          <div class="items">${items}</div>
+          <div class="line"></div>
+          <div style="font-size:16px; font-weight:bold; text-align:right;">總計: $${total}</div>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    printWin.print();
+    printWin.close();
+  }
+
+  // 第一次載入與每 8 秒自動輪詢
+  fetchOrders();
+  setInterval(fetchOrders, 8000);
+</script>
+
+</body>
+</html>
