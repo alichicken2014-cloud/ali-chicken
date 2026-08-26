@@ -17,7 +17,6 @@
     .items-box { font-size: 16px; white-space: pre-line; font-weight: bold; line-height: 1.5; margin-bottom: 12px; }
     .btn-action { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
     .btn-print { background: #3498db; color: white; margin-bottom: 6px; }
-    .btn-done { background: #27ae60; color: white; }
   </style>
 </head>
 <body>
@@ -25,8 +24,8 @@
 <div class="header">
   <h2>🍗 阿力香雞排 - 廚房接單看板</h2>
   <div>
-    <span class="status-badge" id="soundStatus">🔊 聲音已準備</span>
-    <button onclick="enableSound()" style="padding: 6px 12px; margin-left: 10px; cursor: pointer;">點我測試聲音</button>
+    <span class="status-badge" id="soundStatus">🗣️ 語音已準備</span>
+    <button onclick="speakNewOrder()" style="padding: 6px 12px; margin-left: 10px; cursor: pointer; font-weight: bold;">🔊 測試語音提示</button>
   </div>
 </div>
 
@@ -35,29 +34,26 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec"; // 您的 GAS 網址
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
   let knownOrders = new Set();
-  let audioCtx = null;
 
-  function enableSound() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // 播放「你有新訂單」語音功能
+  function speakNewOrder() {
+    if ('speechSynthesis' in window) {
+      // 停止先前未唸完的語音
+      window.speechSynthesis.cancel();
+
+      const msg = new SpeechSynthesisUtterance("你有新訂單");
+      msg.lang = "zh-TW"; // 繁體中文
+      msg.rate = 1.0;     // 語速
+      msg.pitch = 1.1;    // 音調
+      msg.volume = 1.0;   // 音量最大
+
+      window.speechSynthesis.speak(msg);
+      document.getElementById('soundStatus').innerText = "🗣️ 語音監控中";
+    } else {
+      alert("您的瀏覽器不支援語音合成，請使用 Chrome 或 Edge 瀏覽器。");
     }
-    playBeep();
-    document.getElementById('soundStatus').innerText = "🔊 聲音監控中";
-  }
-
-  function playBeep() {
-    if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, audioCtx.currentTime); // 嗶聲音高
-    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.5); // 嗶 0.5 秒
   }
 
   function fetchOrders() {
@@ -69,7 +65,7 @@
 
         orders.forEach(ord => {
           if (!knownOrders.has(ord.orderNo)) {
-            if (knownOrders.size > 0) hasNew = true; // 有新訂單跳出
+            if (knownOrders.size > 0) hasNew = true; // 發現新訂單
             knownOrders.add(ord.orderNo);
           }
 
@@ -90,8 +86,9 @@
 
         document.getElementById('orderGrid').innerHTML = gridHtml || '<div style="color: #bdc3c7;">目前尚無新訂單</div>';
         
+        // 抓到新訂單時觸發語音
         if (hasNew) {
-          playBeep();
+          speakNewOrder();
         }
       })
       .catch(err => console.log(err));
