@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阿力香雞排-崑山店</title>
+  <style>
+    :root {
+      --bg-color: #fdfbf2;
+      --card-bg: #ffffff;
+      --primary-color: #f39c12;
+      --secondary-color: #e67e22;
+      --accent-color: #27ae60;
+      --border-color: #f1c40f;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      margin: 0; padding: 12px; color: #444;
+    }
+    .container {
+      max-width: 500px; margin: 0 auto;
+      background: var(--card-bg);
+      border: 4px dashed var(--border-color);
+      border-radius: 25px; padding: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    }
+    .header { text-align: center; margin-bottom: 12px; }
+    .header h1 {
+      margin: 5px 0; color: #d35400; font-size: 22px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .chicken-badge {
+      background: #fef9e7; color: var(--secondary-color);
+      padding: 4px 12px; border-radius: 15px; font-size: 13px; font-weight: bold;
+    }
+    .section-title {
+      font-size: 15px; font-weight: bold; color: #d35400;
+      margin: 12px 0 8px 0; display: flex; align-items: center; gap: 5px;
+    }
+    .bag-box { background: #fcf3cf; border-radius: 16px; padding: 12px; margin-bottom: 15px; }
+    .option-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+    .opt-btn {
+      background: white; border: 1.5px solid #f39c12; padding: 6px 12px;
+      border-radius: 12px; font-size: 13px; cursor: pointer; user-select: none;
+    }
+    .opt-btn input { display: none; }
+    .opt-btn.active { background: #f39c12; color: white; font-weight: bold; }
+    .tab-scroll {
+      display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 12px;
+      scrollbar-width: none;
+    }
+    .tab-scroll::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      background: #fff8e7; border: 2px solid #f9e79f; padding: 10px 18px;
+      border-radius: 25px; font-size: 16px; font-weight: bold; color: #d35400;
+      white-space: nowrap; cursor: pointer; transition: all 0.2s;
+    }
+    .tab-btn.active { background: #d35400; color: white; border-color: #d35400; box-shadow: 0 4px 8px rgba(211,84,0,0.2); }
+    .grid-menu { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; min-height: 150px; }
+    .grid-card {
+      background: #fff8e7; border: 2px solid #f9e79f; border-radius: 16px;
+      padding: 12px; text-align: center; cursor: pointer; transition: transform 0.1s; position: relative;
+    }
+    .grid-card:active { transform: scale(0.97); }
+    .card-title { font-weight: bold; font-size: 15px; color: #333; margin-bottom: 4px; }
+    .card-price { color: #e67e22; font-weight: bold; font-size: 14px; }
+    .badge-count {
+      position: absolute; top: -6px; right: -6px; background: #27ae60;
+      color: white; border-radius: 50%; width: 22px; height: 22px;
+      font-size: 12px; line-height: 22px; font-weight: bold;
+    }
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 99;
+    }
+    .modal-content {
+      background: white; width: 85%; max-width: 360px; border-radius: 20px;
+      padding: 20px; border: 3px solid var(--border-color);
+    }
+    .modal-header { font-size: 18px; font-weight: bold; text-align: center; color: #d35400; margin-bottom: 12px; }
+    .modal-row { margin-bottom: 12px; }
+    .btn-grid-select { display: inline-block; padding: 6px 12px; margin: 3px; border-radius: 10px; border: 1px solid #ccc; font-size: 13px; cursor: pointer; }
+    .btn-grid-select.selected { background: #f39c12; color: white; border-color: #f39c12; }
+    .qty-ctrl { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; }
+    .btn-circle { width: 32px; height: 32px; border-radius: 50%; border: none; background: #f39c12; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
+    .footer { background: #fff; border-top: 2px dashed var(--border-color); padding-top: 12px; margin-top: 15px; }
+    .input-label { font-size: 15px; font-weight: bold; color: #d35400; margin: 8px 0 4px 0; display: block; }
+    .input-box-large {
+      width: 100%; height: 48px; padding: 10px 14px; box-sizing: border-box;
+      border: 2px solid #f39c12; border-radius: 12px; margin-bottom: 8px;
+      font-size: 16px; font-weight: bold; color: #333; outline: none;
+    }
+    .btn-submit { width: 100%; height: 50px; background: #27ae60; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 15px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <span class="chicken-badge">🐥 現點現炸 酥脆美味 🥤</span>
+    <h1>🐥 阿力香雞排 崑山店 🍟</h1>
+  </div>
+
+  <div class="bag-box">
+    <div class="section-title" style="margin-top:0;">🧂 整包辣度調味（必選）：</div>
+    <div class="option-group" id="mainFlavorGroup">
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="胡椒" onclick="selectSingleOpt(this)">胡椒</label>
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="小辣" onclick="selectSingleOpt(this)">小辣</label>
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="中辣" onclick="selectSingleOpt(this)">中辣</label>
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="大辣" onclick="selectSingleOpt(this)">大辣</label>
+      <label class="opt-btn"><input type="radio" name="mainFlavor" value="都不加" onclick="selectSingleOpt(this)">都不加</label>
+    </div>
+
+    <div class="section-title">🌿 特殊偏好：</div>
+    <div class="option-group">
+      <label class="opt-btn" id="lbl_basil"><input type="checkbox" id="chk_basil" value="不要九層塔" onchange="toggleMultiOpt(this)">不要九層塔 🌿</label>
+    </div>
+  </div>
+
+  <div class="tab-scroll" id="categoryTabs"></div>
+  <div class="grid-menu" id="gridMenu">載入菜單中...</div>
+
+  <div class="footer">
+    <label class="input-label" for="custName">👤 訂購人：</label>
+    <input type="text" id="custName" class="input-box-large" placeholder="請輸入姓名 (必填)" required>
+    
+    <label class="input-label" for="custPhone">📞 電話：</label>
+    <input type="tel" id="custPhone" class="input-box-large" placeholder="請輸入聯絡電話 (必填)" maxlength="10" required>
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin: 12px 0; font-weight:bold;">
+      <span style="font-size:16px;">總計金額：</span>
+      <span style="color:#e67e22; font-size:24px;" id="totalDisplay">$0</span>
+    </div>
+    <button class="btn-submit" onclick="submitOrderData()">💛 確認送出訂單 💛</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="itemModal">
+  <div class="modal-content">
+    <div class="modal-header" id="modalItemName">商品名稱</div>
+    <div class="modal-row" id="portionArea">
+      <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">選擇大小/份量：</div>
+      <div id="portionOptions"></div>
+    </div>
+    <div id="chickenCustomArea" style="display:none; background:#fffdf5; padding:8px; border-radius:10px; margin-bottom:10px;">
+      <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">雞排切法：</div>
+      <div id="cutOptions">
+        <span class="btn-grid-select selected" onclick="selectBtnGroup(this, 'cut')">要切</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'cut')">不切</span>
+      </div>
+      <div style="font-size:13px; font-weight:bold; margin:6px 0 4px 0;">個別辣度：</div>
+      <div id="spicyOptions">
+        <span class="btn-grid-select selected" onclick="selectBtnGroup(this, 'spicy')">隨整包</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">胡椒</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">小辣</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">中辣</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">大辣</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">都不加</span>
+      </div>
+    </div>
+    <div class="qty-ctrl">
+      <button class="btn-circle" onclick="changeModalQty(-1)">-</button>
+      <span style="font-weight:bold; font-size:18px;" id="modalQty">1</span>
+      <button class="btn-circle" onclick="changeModalQty(1)">+</button>
+    </div>
+    <button class="btn-submit" style="background:#f39c12; height:44px; font-size:16px;" onclick="saveItemToCart()">加入購物車</button>
+    <button style="width:100%; border:none; background:none; color:#888; margin-top:8px; cursor:pointer;" onclick="closeModal()">取消</button>
+  </div>
+</div>
+
+<script>
+  // 🔴 請將此處替換為您第一步取得的 Google Apps Script Web App URL
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/您的SCRIPT_ID/exec";
+
+  let groupedMenu = {};
+  let categories = ['全部'];
+  let currentCategory = '全部';
+  let cart = [];
+  let currentItemName = '';
+  let currentQty = 1;
+
+  window.onload = function() {
+    fetch(GAS_WEB_APP_URL)
+      .then(res => res.json())
+      .then(data => processMenu(data))
+      .catch(err => {
+        document.getElementById('gridMenu').innerText = "菜單載入失敗，請重新整理。";
+      });
+  };
+
+  function selectSingleOpt(el) {
+    document.querySelectorAll('#mainFlavorGroup .opt-btn').forEach(b => b.classList.remove('active'));
+    el.parentElement.classList.add('active');
+  }
+
+  function toggleMultiOpt(el) {
+    el.parentElement.classList.toggle('active', el.checked);
+  }
+
+  function processMenu(data) {
+    groupedMenu = {};
+    categories = ['全部'];
+
+    data.forEach(item => {
+      let cat = item.category;
+      if (!categories.includes(cat)) categories.push(cat);
+
+      if (!groupedMenu[item.name]) {
+        groupedMenu[item.name] = { category: cat, portions: [] };
+      }
+      groupedMenu[item.name].portions.push(item);
+    });
+
+    renderCategoryTabs();
+    renderGrid();
+  }
+
+  function renderCategoryTabs() {
+    let html = '';
+    categories.forEach(cat => {
+      html += `<div class="tab-btn ${cat === currentCategory ? 'active' : ''}" onclick="switchCategory('${cat}')">${cat}</div>`;
+    });
+    document.getElementById('categoryTabs').innerHTML = html;
+  }
+
+  function switchCategory(cat) {
+    currentCategory = cat;
+    renderCategoryTabs();
+    renderGrid();
+  }
+
+  function renderGrid() {
+    let html = '';
+    for (let name in groupedMenu) {
+      const itemGroup = groupedMenu[name];
+      if (currentCategory !== '全部' && itemGroup.category !== currentCategory) continue;
+
+      const minPrice = Math.min(...itemGroup.portions.map(p => p.price));
+      const count = cart.filter(c => c.name === name).reduce((sum, c) => sum + c.qty, 0);
+
+      html += `
+        <div class="grid-card" onclick="openModal('${name}')">
+          ${count > 0 ? `<div class="badge-count">${count}</div>` : ''}
+          <div class="card-title">${name}</div>
+          <div class="card-price">$${minPrice}${itemGroup.portions.length > 1 ? ' 起' : ''}</div>
+        </div>
+      `;
+    }
+    document.getElementById('gridMenu').innerHTML = html || '<div style="grid-column: span 2; text-align:center; color:#999; padding:20px;">此分類無商品</div>';
+  }
+
+  function openModal(name) {
+    currentItemName = name;
+    currentQty = 1;
+    document.getElementById('modalItemName').innerText = name;
+    document.getElementById('modalQty').innerText = currentQty;
+
+    const portions = groupedMenu[name].portions;
+    let portionHtml = '';
+    portions.forEach((p, idx) => {
+      portionHtml += `<span class="btn-grid-select ${idx === 0 ? 'selected' : ''}" data-price="${p.price}" data-portion="${p.portion}" onclick="selectBtnGroup(this, 'portion')">${p.portion} ($${p.price})</span>`;
+    });
+    document.getElementById('portionOptions').innerHTML = portionHtml;
+    document.getElementById('chickenCustomArea').style.display = name.includes('雞排') ? 'block' : 'none';
+    document.getElementById('itemModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('itemModal').style.display = 'none';
+  }
+
+  function selectBtnGroup(el, groupType) {
+    el.parentElement.querySelectorAll('.btn-grid-select').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function changeModalQty(delta) {
+    currentQty = Math.max(1, currentQty + delta);
+    document.getElementById('modalQty').innerText = currentQty;
+  }
+
+  function saveItemToCart() {
+    const selectedPortionEl = document.querySelector('#portionOptions .selected');
+    const portion = selectedPortionEl.getAttribute('data-portion');
+    const price = Number(selectedPortionEl.getAttribute('data-price'));
+
+    let note = '';
+    if (currentItemName.includes('雞排')) {
+      const cut = document.querySelector('#cutOptions .selected').innerText;
+      const spicy = document.querySelector('#spicyOptions .selected').innerText;
+      note = `${cut}/${spicy}`;
+    }
+
+    cart.push({ name: currentItemName, portion: portion, price: price, qty: currentQty, note: note });
+    closeModal();
+    renderGrid();
+    calculateTotal();
+  }
+
+  function calculateTotal() {
+    let total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    document.getElementById('totalDisplay').innerText = '$' + total;
+  }
+
+  function submitOrderData() {
+    const selectedFlavor = document.querySelector('input[name="mainFlavor"]:checked');
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+
+    if (!selectedFlavor) { alert('請點選【整包辣度調味】！'); return; }
+    if (!name) { alert('請填寫【訂購人姓名】！'); return; }
+    if (!phone) { alert('請填寫【電話】！'); return; }
+    if (cart.length === 0) { alert('購物車是空的，請至少點選一項餐點！'); return; }
+
+    let bagFlavors = [selectedFlavor.value];
+    if (document.getElementById('chk_basil').checked) bagFlavors.push('不要九層塔');
+
+    let totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const submitBtn = document.querySelector('.btn-submit');
+    submitBtn.disabled = true;
+    submitBtn.innerText = '訂單傳送中...';
+
+    const payload = { name, phone, bagFlavors, items: cart, totalPrice };
+
+    fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert(`🎉 下單成功！您的取單號為 ${res.orderNo}`);
+        location.reload();
+      } else {
+        alert('下單失敗：' + res.error);
+        submitBtn.disabled = false;
+      }
+    })
+    .catch(err => {
+      alert('網路連線失敗，請稍後再試。');
+      submitBtn.disabled = false;
+    });
+  }
+</script>
+
+</body>
+</html>
