@@ -183,18 +183,24 @@
   let currentQty = 1;
 
   window.onload = function() {
-    liff.init({ liffId: MY_LIFF_ID }).then(() => {
-      if (liff.isLoggedIn()) {
-        liff.getProfile().then(profile => {
-          userLineUid = profile.userId;
-          document.getElementById('custName').value = profile.displayName;
-        });
-      } else {
-        liff.login();
-      }
-    }).catch(err => console.log('LIFF 初始化：', err));
+    // 1. 初始化 LIFF (相容 iOS Safari 容錯寫法，即使登入失敗也不會卡死頁面)
+    if (typeof liff !== 'undefined' && MY_LIFF_ID) {
+      liff.init({ liffId: MY_LIFF_ID }).then(() => {
+        if (liff.isLoggedIn()) {
+          liff.getProfile().then(profile => {
+            userLineUid = profile.userId || '';
+            const nameInput = document.getElementById('custName');
+            if (nameInput && !nameInput.value) {
+              nameInput.value = profile.displayName || '';
+            }
+          }).catch(err => console.log('Profile 取得失敗:', err));
+        }
+      }).catch(err => {
+        console.log('LIFF 初始化失敗或處於外部瀏覽器環境，改為免登入瀏覽模式:', err);
+      });
+    }
 
-    // 載入菜單並檢查營業狀態
+    // 2. 載入菜單並檢查營業狀態
     fetch(GAS_WEB_APP_URL)
       .then(res => res.json())
       .then(resData => {
@@ -216,7 +222,8 @@
         }
       })
       .catch(err => {
-        document.getElementById('gridMenu').innerText = "菜單載入失敗，請重新整理。";
+        console.error("菜單載入失敗:", err);
+        document.getElementById('gridMenu').innerText = "菜單載入失敗，請重新整理頁面。";
       });
   };
 
@@ -370,7 +377,7 @@
     .then(res => {
       if (res.success) {
         alert(`🎉 下單成功！您的取單號為 ${res.orderNo}`);
-        if (liff.isInClient()) {
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
           liff.closeWindow();
         } else {
           location.reload();
