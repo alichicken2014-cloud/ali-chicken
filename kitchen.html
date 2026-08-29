@@ -62,7 +62,8 @@
   }
 
   function fetchOrders() {
-    fetch(GAS_WEB_APP_URL + "?action=getLiveOrders")
+    // 增加 redirect: 'follow' 確保能正確跟隨 GAS 的 302 轉址
+    fetch(GAS_WEB_APP_URL + "?action=getLiveOrders", { method: "GET", redirect: "follow" })
       .then(res => res.json())
       .then(resData => {
         const orders = resData.orders || [];
@@ -78,11 +79,9 @@
           const remarkText = ord.remark || '';
           const displayTime = String(ord.time || '');
 
-          // 自動列印與語音廣播（僅對新進來的待處理單）
           if (!knownOrders.has(orderNoStr)) {
             if (knownOrders.size > 0 && !isCompleted) {
               speakNewOrder();
-              // 自動印單
               printCard(ord.orderNo, displayTime, ord.name, ord.phone, itemsText, remarkText, ord.totalPrice);
             }
             knownOrders.add(orderNoStr);
@@ -117,18 +116,17 @@
       })
       .catch(err => {
         console.error("讀取訂單失敗：", err);
-        document.getElementById('orderGrid').innerHTML = '<div style="color: #e74c3c;">連線失敗，正在重試...</div>';
+        document.getElementById('orderGrid').innerHTML = `<div style="color: #e74c3c;">連線失敗 (${err.message})，正在重試...</div>`;
       });
   }
 
-  // 點擊「完成」更新試算表進度
   function markOrderDone(orderNo) {
     if (confirm(`確定訂單 #${orderNo} 已完成出餐嗎？`)) {
-      fetch(`${GAS_WEB_APP_URL}?action=updateOrderStatus&orderNo=${encodeURIComponent(orderNo)}&status=${encodeURIComponent('已完成')}`)
+      fetch(`${GAS_WEB_APP_URL}?action=updateOrderStatus&orderNo=${encodeURIComponent(orderNo)}&status=${encodeURIComponent('已完成')}`, { redirect: "follow" })
         .then(res => res.json())
         .then(res => {
           if (res.success) {
-            fetchOrders(); // 重新整理看板
+            fetchOrders();
           } else {
             alert("更新狀態失敗，請重試");
           }
@@ -140,7 +138,7 @@
   function toggleShopStatus() {
     const targetStatus = currentShopStatus === "正常" ? "公休" : "正常";
     if (confirm(`確定要將系統切換為【${targetStatus === "公休" ? "臨時公休" : "正常營業"}】嗎？`)) {
-      fetch(`${GAS_WEB_APP_URL}?action=toggleStatus&status=${encodeURIComponent(targetStatus)}`)
+      fetch(`${GAS_WEB_APP_URL}?action=toggleStatus&status=${encodeURIComponent(targetStatus)}`, { redirect: "follow" })
         .then(res => res.json())
         .then(res => {
           if (res.success) {
@@ -165,10 +163,7 @@
 
   function printCard(no, time, name, phone, items, remark, total) {
     const printWin = window.open('', '', 'width=400,height=600');
-    if (!printWin) {
-      alert("瀏覽器阻擋了彈出視窗，請在網址列右側允許開啟彈出視窗以自動列印！");
-      return;
-    }
+    if (!printWin) return;
     printWin.document.write(`
       <html>
         <head>
