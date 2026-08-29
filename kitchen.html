@@ -11,13 +11,14 @@
     .btn-toggle { padding: 8px 16px; border: none; border-radius: 20px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; margin-left: 10px; transition: 0.2s; }
     .btn-open { background: #27ae60; }
     .btn-close { background: #e74c3c; }
-    .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+    .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
     .order-card { background: #fff; color: #333; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-top: 6px solid #e67e22; }
     .order-card.new { animation: blink 1s infinite alternate; border-top-color: #e74c3c; }
     @keyframes blink { from { box-shadow: 0 0 5px #e74c3c; } to { box-shadow: 0 0 20px #e74c3c; } }
     .order-no { font-size: 24px; font-weight: bold; color: #d35400; display: flex; justify-content: space-between; }
     .cust-info { font-size: 14px; color: #7f8c8d; margin: 8px 0; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
-    .items-box { font-size: 16px; white-space: pre-line; font-weight: bold; line-height: 1.5; margin-bottom: 12px; }
+    .items-box { font-size: 16px; white-space: pre-line; font-weight: bold; line-height: 1.5; margin-bottom: 10px; background: #fffdf5; padding: 10px; border-radius: 8px; border: 1px solid #f9e79f; }
+    .remark-box { font-size: 14px; font-weight: bold; color: #c0392b; background: #fadbd8; padding: 8px 10px; border-radius: 6px; margin-bottom: 12px; }
     .btn-action { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
     .btn-print { background: #3498db; color: white; margin-bottom: 6px; }
   </style>
@@ -29,7 +30,7 @@
   <div style="display: flex; align-items: center;">
     <span class="status-badge" id="soundStatus">🗣️ 語音監控中</span>
     <button id="toggleBtn" class="btn-toggle btn-open" onclick="toggleShopStatus()">🟢 營業中 (點擊改公休)</button>
-    <button onclick="speakNewOrder()" style="padding: 6px 12px; margin-left: 10px; cursor: pointer; font-weight: bold;">🔊 測試語音</button>
+    <button onclick="speakNewOrder()" style="padding: 6px 12px; margin-left: 10px; cursor: pointer; font-weight: bold; border-radius: 8px; border: none; background: #f39c12; color: white;">🔊 測試語音</button>
   </div>
 </div>
 
@@ -58,29 +59,36 @@
       .then(res => res.json())
       .then(resData => {
         const orders = resData.orders || [];
-        currentShopStatus = resData.shopStatus || "正常";
+        currentShopStatus = resData.status || resData.shopStatus || "正常";
         updateToggleBtnUI();
 
         let gridHtml = '';
         let hasNew = false;
 
         orders.forEach(ord => {
-          if (!knownOrders.has(ord.orderNo)) {
+          const orderNoStr = String(ord.orderNo);
+          if (!knownOrders.has(orderNoStr)) {
             if (knownOrders.size > 0) hasNew = true;
-            knownOrders.add(ord.orderNo);
+            knownOrders.add(orderNoStr);
           }
 
+          // 修正欄位取值：使用 itemsDetail 與 remark
+          const itemsText = ord.itemsDetail || ord.items || '';
+          const remarkText = ord.remark || '';
+          const displayTime = String(ord.time || '');
+
           gridHtml += `
-            <div class="order-card ${ord.status === '已下單' ? 'new' : ''}">
+            <div class="order-card ${ord.status === '待處理' ? 'new' : ''}">
               <div class="order-no">
-                <span>${ord.orderNo}</span>
-                <span style="font-size: 18px; color:#27ae60;">$${ord.totalPrice}</span>
+                <span>取單號：#${ord.orderNo}</span>
+                <span style="font-size: 20px; color:#27ae60;">$${ord.totalPrice}</span>
               </div>
               <div class="cust-info">
-                ⏰ ${ord.time.substring(11, 16)} | 👤 ${ord.name} (${ord.phone})
+                ⏰ ${displayTime} | 👤 ${ord.name} (${ord.phone})
               </div>
-              <div class="items-box">${ord.items}</div>
-              <button class="btn-action btn-print" onclick="printCard('${ord.orderNo}', '${ord.time}', '${ord.name}', '${ord.phone}', \`${ord.items}\`, ${ord.totalPrice})">🖨️ 列印單據</button>
+              <div class="items-box">${itemsText}</div>
+              ${remarkText ? `<div class="remark-box">📝 備註：${remarkText}</div>` : ''}
+              <button class="btn-action btn-print" onclick="printCard('${ord.orderNo}', '${displayTime}', '${ord.name}', '${ord.phone}', \`${itemsText.replace(/`/g, '')}\`, '${remarkText.replace(/`/g, '')}', ${ord.totalPrice})">🖨️ 列印單據</button>
             </div>
           `;
         });
@@ -88,7 +96,10 @@
         document.getElementById('orderGrid').innerHTML = gridHtml || '<div style="color: #bdc3c7;">目前尚無新訂單</div>';
         if (hasNew) speakNewOrder();
       })
-      .catch(err => console.log(err));
+      .catch(err => {
+        console.error("讀取訂單失敗：", err);
+        document.getElementById('orderGrid').innerHTML = '<div style="color: #e74c3c;">連線失敗，正在重試...</div>';
+      });
   }
 
   function toggleShopStatus() {
@@ -117,7 +128,7 @@
     }
   }
 
-  function printCard(no, time, name, phone, items, total) {
+  function printCard(no, time, name, phone, items, remark, total) {
     const printWin = window.open('', '', 'width=400,height=600');
     printWin.document.write(`
       <html>
@@ -128,17 +139,19 @@
             .title { font-size: 18px; font-weight: bold; text-align: center; }
             .line { border-bottom: 1px dashed #000; margin: 8px 0; }
             .items { font-size: 14px; white-space: pre-line; font-weight: bold; }
+            .remark { font-size: 14px; font-weight: bold; margin-top: 5px; }
           </style>
         </head>
         <body>
           <div class="title">阿力香雞排 (崑山店)</div>
-          <div class="title" style="font-size:24px;">${no}</div>
+          <div class="title" style="font-size:28px;">#${no}</div>
           <div class="line"></div>
           <div>時間: ${time}</div>
           <div>姓名: ${name}</div>
           <div>電話: ${phone}</div>
           <div class="line"></div>
           <div class="items">${items}</div>
+          ${remark ? `<div class="line"></div><div class="remark">備註: ${remark}</div>` : ''}
           <div class="line"></div>
           <div style="font-size:16px; font-weight:bold; text-align:right;">總計: $${total}</div>
         </body>
