@@ -1,73 +1,33 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>【阿力香雞排】廚房即時接單看板</title>
-  <style>
-    body { font-family: -apple-system, sans-serif; background: #2c3e50; color: white; margin: 0; padding: 20px; }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #34495e; padding-bottom: 10px; margin-bottom: 15px; }
-    .status-badge { background: #27ae60; padding: 6px 16px; border-radius: 20px; font-weight: bold; }
-    .btn-toggle { padding: 8px 16px; border: none; border-radius: 20px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; margin-left: 10px; transition: 0.2s; }
-    .btn-open { background: #27ae60; }
-    .btn-close { background: #e74c3c; }
-    
-    /* 啟用語音提示條 */
-    .audio-notice { background: #e67e22; color: white; text-align: center; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 15px; cursor: pointer; display: block; }
-
-    .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
-    .order-card { background: #fff; color: #333; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-top: 6px solid #e67e22; position: relative; }
-    .order-card.new { animation: blink 1s infinite alternate; border-top-color: #e74c3c; }
-    .order-card.completed { opacity: 0.5; border-top-color: #95a5a6; background: #ecf0f1; }
-    @keyframes blink { from { box-shadow: 0 0 5px #e74c3c; } to { box-shadow: 0 0 20px #e74c3c; } }
-    .order-no { font-size: 24px; font-weight: bold; color: #d35400; display: flex; justify-content: space-between; align-items: center; }
-    .cust-info { font-size: 13px; color: #7f8c8d; margin: 8px 0; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
-    .items-box { font-size: 16px; white-space: pre-line; font-weight: bold; line-height: 1.5; margin-bottom: 10px; background: #fffdf5; padding: 10px; border-radius: 8px; border: 1px solid #f9e79f; }
-    .remark-box { font-size: 14px; font-weight: bold; color: #c0392b; background: #fadbd8; padding: 8px 10px; border-radius: 6px; margin-bottom: 12px; }
-    .btn-group { display: flex; gap: 8px; margin-top: 10px; }
-    .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
-    .btn-print { background: #3498db; }
-    .btn-done { background: #27ae60; }
-    .btn-done:disabled { background: #bdc3c7; cursor: not-allowed; }
-    .status-tag { font-size: 14px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
-    .tag-pending { background: #f39c12; color: white; }
-    .tag-done { background: #7f8c8d; color: white; }
-  </style>
-</head>
-<body onclick="enableAudio()">
-
-<div class="header">
-  <h2>🍗 阿力香雞排 - 廚房接單看板</h2>
-  <div style="display: flex; align-items: center;">
-    <span class="status-badge" id="soundStatus">🗣️ 語音監控中</span>
-    <button id="toggleBtn" class="btn-toggle btn-open" onclick="toggleShopStatus(event)">🟢 營業中 (點擊改公休)</button>
-    <button onclick="speakNewOrder(event)" style="padding: 6px 12px; margin-left: 10px; cursor: pointer; font-weight: bold; border-radius: 8px; border: none; background: #f39c12; color: white;">🔊 測試語音</button>
-  </div>
-</div>
-
-<div class="audio-notice" id="audioNotice" onclick="enableAudio()">
-  🔔 開店提醒：請先「點擊畫面上任何地方」一次以解鎖自動語音播報功能！
-</div>
-
-<div class="order-grid" id="orderGrid">
-  <div style="color: #bdc3c7;">正在連線訂單系統...</div>
-</div>
-
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
   let knownOrders = new Set();
   let currentShopStatus = "正常";
   let audioUnlocked = false;
 
+  // 使用 AudioContext 產生實體嗶嗶聲 (不受語音引擎影響，100% 能響)
+  function playBeep() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // 880Hz 高音
+      gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3); // 嗶 0.3 秒
+    } catch(e) {
+      console.error("Beep error:", e);
+    }
+  }
+
   function enableAudio() {
     if (!audioUnlocked) {
       audioUnlocked = true;
-      document.getElementById('audioNotice').style.display = 'none';
-      // 播放一次極短靜音解鎖瀏覽器權限
-      if ('speechSynthesis' in window) {
-        const msg = new SpeechSynthesisUtterance("");
-        window.speechSynthesis.speak(msg);
-      }
+      const notice = document.getElementById('audioNotice');
+      if (notice) notice.style.display = 'none';
+      playBeep(); // 點擊時播放嗶一聲代表成功解鎖
     }
   }
 
@@ -75,15 +35,24 @@
     if (e) e.stopPropagation();
     enableAudio();
     
+    // 1. 先響嗶嗶警示聲
+    playBeep();
+
+    // 2. 語音播報 (唸兩次)
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // 停止先前的語音
+      window.speechSynthesis.cancel(); // 停止先前尚未唸完的
       
       const text = orderNo ? `新訂單，取單號 ${orderNo}` : "你有新訂單";
       const msg = new SpeechSynthesisUtterance(text);
       msg.lang = "zh-TW";
-      msg.rate = 0.9;  // 稍微放慢語速讓廚房聽得更清楚
+      msg.rate = 1.0;
       msg.volume = 1.0;
-      
+
+      // 確保選擇中文語音庫
+      const voices = window.speechSynthesis.getVoices();
+      const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('TW'));
+      if (zhVoice) msg.voice = zhVoice;
+
       window.speechSynthesis.speak(msg);
     }
   }
@@ -99,7 +68,7 @@
         let gridHtml = '';
 
         orders.forEach(ord => {
-          const orderNoStr = String(ord.orderNo);
+          const orderId = String(ord.orderNo);
           const isCompleted = ord.status === '已完成';
           const itemsText = ord.itemsDetail || ord.items || '';
           const remarkText = ord.remark || '';
@@ -107,13 +76,13 @@
           let displayTime = String(ord.time || '');
           if (displayTime.length > 19) displayTime = displayTime.substring(0, 19);
 
-          // 判斷是否為剛進來的新訂單
-          if (!knownOrders.has(orderNoStr)) {
+          // 新訂單觸發提示
+          if (!knownOrders.has(orderId)) {
             if (knownOrders.size > 0 && !isCompleted) {
-              speakNewOrder(null, ord.orderNo); // 播報取單號
+              speakNewOrder(null, ord.orderNo); // 響鈴 + 語音
               printCard(ord.orderNo, displayTime, ord.name, ord.phone, itemsText, remarkText, ord.totalPrice);
             }
-            knownOrders.add(orderNoStr);
+            knownOrders.add(orderId);
           }
 
           gridHtml += `
@@ -145,7 +114,6 @@
       })
       .catch(err => {
         console.error("讀取訂單失敗：", err);
-        document.getElementById('orderGrid').innerHTML = `<div style="color: #e74c3c;">連線失敗，正在重試...</div>`;
       });
   }
 
@@ -230,6 +198,3 @@
   fetchOrders();
   setInterval(fetchOrders, 8000);
 </script>
-
-</body>
-</html>
