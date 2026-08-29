@@ -94,13 +94,16 @@
       font-size: 16px; font-weight: bold; color: #333; outline: none;
     }
     textarea.input-box-large { height: 70px; resize: none; font-weight: normal; font-size: 14px; }
-    .btn-cart-view {
-      width: 100%; background: #e67e22; color: white; border: none; padding: 10px;
-      border-radius: 12px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px;
+    
+    /* 顯眼的頂部購物車按鈕 */
+    .btn-cart-top {
+      width: 100%; background: #e67e22; color: white; border: none; padding: 12px;
+      border-radius: 16px; font-weight: bold; font-size: 16px; cursor: pointer;
+      margin-bottom: 12px; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3);
+      display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;
     }
     .btn-submit { width: 100%; height: 50px; background: #27ae60; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 15px; cursor: pointer; }
     
-    /* 購物車清單列表樣式 */
     .cart-item-row {
       display: flex; justify-content: space-between; align-items: center;
       padding: 10px 0; border-bottom: 1px dashed #eee;
@@ -119,6 +122,12 @@
     <span class="chicken-badge">🐥 現點現炸 酥脆美味 🥤</span>
     <h1>🐥 阿力香雞排 崑山店 🍟</h1>
   </div>
+
+  <!-- 顯眼置頂的購物車進入按鈕 -->
+  <button class="btn-cart-top" onclick="openCartModal()">
+    <span>🛒 查看 / 修改購物車</span>
+    <span style="background: white; color: #e67e22; border-radius: 12px; padding: 2px 10px; font-size: 14px;" id="cartCountTop">0 件</span>
+  </button>
 
   <div class="bag-box">
     <div class="section-title" style="margin-top:0;">🧂 整包辣度調味（必選）：</div>
@@ -140,8 +149,6 @@
   <div class="grid-menu" id="gridMenu">載入菜單中...</div>
 
   <div class="footer">
-    <button class="btn-cart-view" onclick="openCartModal()">🛒 查看/修改購物車 (<span id="cartCount">0</span>件)</button>
-
     <label class="input-label" for="custName">👤 訂購人：</label>
     <input type="text" id="custName" class="input-box-large" placeholder="請輸入姓名 (必填)" required>
     
@@ -222,6 +229,7 @@
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
   const MY_LIFF_ID = "2011276802-mdrsLFND";
+  const MY_LIFF_URL = "https://liff.line.me/" + MY_LIFF_ID;
 
   let userLineUid = '';
   let groupedMenu = {};
@@ -234,6 +242,13 @@
   window.onload = function() {
     if (typeof liff !== 'undefined' && MY_LIFF_ID) {
       liff.init({ liffId: MY_LIFF_ID }).then(() => {
+        // 強制檢查是否在 LINE App 內開啟，若非 LINE 內開啟則自動跳轉跳出
+        if (!liff.isInClient()) {
+          alert('⚠️ 請從【阿力香雞排 官方LINE】點選連結進行點餐，才能順利接收訂單確認訊息喔！');
+          window.location.href = MY_LIFF_URL; // 自動導向 LIFF 觸發開起 LINE
+          return;
+        }
+
         if (liff.isLoggedIn()) {
           liff.getProfile().then(profile => {
             userLineUid = profile.userId || '';
@@ -244,7 +259,8 @@
           }).catch(err => console.log('Profile 取得失敗:', err));
         }
       }).catch(err => {
-        console.log('LIFF 初始化失敗或處於外部瀏覽器環境，改為免登入瀏覽模式:', err);
+        alert('⚠️ 請從【阿力香雞排 官方LINE】點選連結進行點餐！');
+        window.location.href = MY_LIFF_URL;
       });
     }
 
@@ -404,11 +420,10 @@
     let total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     let totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
     document.getElementById('totalDisplay').innerText = '$' + total;
-    document.getElementById('cartCount').innerText = totalQty;
+    document.getElementById('cartCountTop').innerText = totalQty + ' 件';
     document.getElementById('cartModalTotal').innerText = '$' + total;
   }
 
-  // 開啟購物車預覽彈窗
   function openCartModal() {
     const cartListArea = document.getElementById('cartListArea');
     if (cart.length === 0) {
@@ -437,7 +452,6 @@
     document.getElementById('cartModal').style.display = 'flex';
   }
 
-  // 調整購物車內特定項目的數量
   function updateCartQty(index, delta) {
     cart[index].qty += delta;
     if (cart[index].qty <= 0) {
@@ -448,7 +462,6 @@
     calculateTotal();
   }
 
-  // 刪除購物車內項目
   function removeCartItem(index) {
     cart.splice(index, 1);
     openCartModal();
@@ -457,6 +470,13 @@
   }
 
   function submitOrderData() {
+    // 再次確保是否有抓到 Line UID
+    if (!userLineUid) {
+      alert('⚠️ 未能取得您的 LINE 身份資訊，請務必由【官方 LINE 內】開啓連結下單！');
+      window.location.href = MY_LIFF_URL;
+      return;
+    }
+
     const selectedFlavor = document.querySelector('input[name="mainFlavor"]:checked');
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
