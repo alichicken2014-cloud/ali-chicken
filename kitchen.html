@@ -41,7 +41,7 @@
   <div style="display: flex; align-items: center;">
     <span class="status-badge" id="soundStatus">🗣️ 語音監控中</span>
     <button id="toggleBtn" class="btn-toggle btn-open" onclick="toggleShopStatus(event)">🟢 營業中 (點擊改公休)</button>
-    <button onclick="speakNewOrder(event)" style="padding: 6px 12px; margin-left: 10px; cursor: pointer; font-weight: bold; border-radius: 8px; border: none; background: #f39c12; color: white;">🔊 測試語音</button>
+    <button onclick="testAudio(event)" style="padding: 6px 12px; margin-left: 10px; cursor: pointer; font-weight: bold; border-radius: 8px; border: none; background: #f39c12; color: white;">🔊 測試語音</button>
   </div>
 </div>
 
@@ -56,16 +56,21 @@
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
   let knownOrders = new Set();
+  let isFirstLoad = true; // 用於標記第一次載入，避免一開頁面就把舊訂單全部唸出來
   let currentShopStatus = "正常";
   let audioUnlocked = false;
 
+  // 嗶嗶音效 (Web Audio API，最不容易被瀏覽器擋)
   function playBeep() {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // 880Hz 音高
       gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
@@ -76,6 +81,7 @@
     }
   }
 
+  // 解鎖瀏覽器音效權限
   function enableAudio() {
     if (!audioUnlocked) {
       audioUnlocked = true;
@@ -85,13 +91,20 @@
     }
   }
 
-  function speakNewOrder(e, orderNo) {
-    if (e) e.stopPropagation();
+  // 手動測試按鈕用
+  function testAudio(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    enableAudio();
+    speakNewOrder("測試");
+  }
+
+  // 播放語音與嗶嗶聲（修正錯誤：移除 e.stopPropagation 防止報錯中斷）
+  function speakNewOrder(orderNo) {
     enableAudio();
     playBeep();
 
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      window.speechSynthesis.cancel(); // 停止先前的語音
       const text = orderNo ? `新訂單，取單號 ${orderNo}` : "你有新訂單";
       const msg = new SpeechSynthesisUtterance(text);
       msg.lang = "zh-TW";
@@ -106,6 +119,7 @@
     }
   }
 
+  // 抓取後端訂單
   function fetchOrders() {
     fetch(GAS_WEB_APP_URL + "?action=getLiveOrders", { method: "GET", redirect: "follow" })
       .then(res => res.json())
@@ -125,9 +139,11 @@
           let displayTime = String(ord.time || '');
           if (displayTime.length > 19) displayTime = displayTime.substring(0, 19);
 
+          // 新訂單偵測邏輯
           if (!knownOrders.has(orderId)) {
-            if (knownOrders.size > 0 && !isCompleted) {
-              speakNewOrder(null, ord.orderNo);
+            // 如果不是第一次開啟網頁，且該筆訂單尚未完成，觸發語音與列印
+            if (!isFirstLoad && !isCompleted) {
+              speakNewOrder(ord.orderNo);
               printCard(ord.orderNo, displayTime, ord.name, ord.phone, itemsText, remarkText, ord.totalPrice);
             }
             knownOrders.add(orderId);
@@ -158,6 +174,9 @@
           `;
         });
 
+        // 首次加載完成後，將標記改為 false
+        isFirstLoad = false;
+
         document.getElementById('orderGrid').innerHTML = gridHtml || '<div style="color: #bdc3c7;">目前尚無新訂單</div>';
       })
       .catch(err => {
@@ -182,7 +201,7 @@
   }
 
   function toggleShopStatus(e) {
-    if (e) e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
     const targetStatus = currentShopStatus === "正常" ? "公休" : "正常";
     if (confirm(`確定要將系統切換為【${targetStatus === "公休" ? "臨時公休" : "正常營業"}】嗎？`)) {
       fetch(`${GAS_WEB_APP_URL}?action=toggleStatus&status=${encodeURIComponent(targetStatus)}`, { redirect: "follow" })
@@ -244,8 +263,9 @@
     printWin.close();
   }
 
+  // 初始化與定時輪詢 (每 5 秒抓取一次)
   fetchOrders();
-  setInterval(fetchOrders, 8000);
+  setInterval(fetchOrders, 5000);
 </script>
 
 </body>
