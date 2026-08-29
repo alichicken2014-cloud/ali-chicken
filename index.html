@@ -18,6 +18,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-color);
       margin: 0; padding: 12px; color: #444;
+      padding-bottom: 80px; /* 留空給底部按鈕 */
     }
     .container {
       max-width: 500px; margin: 0 auto;
@@ -25,7 +26,6 @@
       border: 4px dashed var(--border-color);
       border-radius: 25px; padding: 16px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.05);
-      padding-bottom: 30px;
     }
     .header { text-align: center; margin-bottom: 12px; }
     .header h1 {
@@ -74,7 +74,7 @@
     }
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 99;
+      background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 999;
     }
     .modal-content {
       background: white; width: 85%; max-width: 380px; border-radius: 20px;
@@ -95,13 +95,27 @@
     }
     textarea.input-box-large { height: 70px; resize: none; font-weight: normal; font-size: 14px; }
     
-    /* 顯眼的頂部購物車按鈕 */
+    /* 頂部置頂購物車條 */
     .btn-cart-top {
-      width: 100%; background: #e67e22; color: white; border: none; padding: 12px;
+      width: 100%; background: #e67e22; color: white; border: none; padding: 12px 16px;
       border-radius: 16px; font-weight: bold; font-size: 16px; cursor: pointer;
       margin-bottom: 12px; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3);
       display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;
     }
+
+    /* 右下角懸浮購物車按鈕 */
+    .floating-cart-btn {
+      position: fixed; right: 20px; bottom: 85px; background: #e67e22; color: white;
+      width: 60px; height: 60px; border-radius: 50%; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      cursor: pointer; z-index: 900; border: 2px solid #fff;
+    }
+    .floating-cart-badge {
+      position: absolute; top: -4px; right: -4px; background: #e74c3c;
+      color: white; border-radius: 50%; width: 22px; height: 22px;
+      font-size: 12px; line-height: 22px; text-align: center; font-weight: bold; border: 2px solid white;
+    }
+
     .btn-submit { width: 100%; height: 50px; background: #27ae60; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 15px; cursor: pointer; }
     
     .cart-item-row {
@@ -123,7 +137,7 @@
     <h1>🐥 阿力香雞排 崑山店 🍟</h1>
   </div>
 
-  <!-- 顯眼置頂的購物車進入按鈕 -->
+  <!-- 置頂購物車進入條 -->
   <button class="btn-cart-top" onclick="openCartModal()">
     <span>🛒 查看 / 修改購物車</span>
     <span style="background: white; color: #e67e22; border-radius: 12px; padding: 2px 10px; font-size: 14px;" id="cartCountTop">0 件</span>
@@ -164,6 +178,13 @@
     </div>
     <button class="btn-submit" onclick="submitOrderData()">💛 確認送出訂單 💛</button>
   </div>
+</div>
+
+<!-- 右下角懸浮購物車浮鈕 -->
+<div class="floating-cart-btn" onclick="openCartModal()">
+  <span class="floating-cart-badge" id="floatCartBadge">0</span>
+  <span style="font-size:20px;">🛒</span>
+  <span style="font-size:10px; font-weight:bold;">購物車</span>
 </div>
 
 <!-- 點餐彈窗 -->
@@ -242,10 +263,10 @@
   window.onload = function() {
     if (typeof liff !== 'undefined' && MY_LIFF_ID) {
       liff.init({ liffId: MY_LIFF_ID }).then(() => {
-        // 強制檢查是否在 LINE App 內開啟，若非 LINE 內開啟則自動跳轉跳出
+        // 強制檢查是否在 LINE 內開啟，若外部瀏覽器點擊則警告並導回 LIFF
         if (!liff.isInClient()) {
           alert('⚠️ 請從【阿力香雞排 官方LINE】點選連結進行點餐，才能順利接收訂單確認訊息喔！');
-          window.location.href = MY_LIFF_URL; // 自動導向 LIFF 觸發開起 LINE
+          window.location.href = MY_LIFF_URL;
           return;
         }
 
@@ -419,8 +440,10 @@
   function calculateTotal() {
     let total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     let totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+    
     document.getElementById('totalDisplay').innerText = '$' + total;
     document.getElementById('cartCountTop').innerText = totalQty + ' 件';
+    document.getElementById('floatCartBadge').innerText = totalQty;
     document.getElementById('cartModalTotal').innerText = '$' + total;
   }
 
@@ -470,7 +493,6 @@
   }
 
   function submitOrderData() {
-    // 再次確保是否有抓到 Line UID
     if (!userLineUid) {
       alert('⚠️ 未能取得您的 LINE 身份資訊，請務必由【官方 LINE 內】開啓連結下單！');
       window.location.href = MY_LIFF_URL;
