@@ -144,6 +144,8 @@
       <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">選擇大小/份量：</div>
       <div id="portionOptions"></div>
     </div>
+
+    <!-- 雞排專屬選項 -->
     <div id="chickenCustomArea" style="display:none; background:#fffdf5; padding:8px; border-radius:10px; margin-bottom:10px;">
       <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">雞排切法：</div>
       <div id="cutOptions">
@@ -160,6 +162,16 @@
         <span class="btn-grid-select" onclick="selectBtnGroup(this, 'spicy')">都不加</span>
       </div>
     </div>
+
+    <!-- 限定品項（薯條/波浪薯條/地瓜薯條）梅粉選項 -->
+    <div id="plumCustomArea" style="display:none; background:#fffdf5; padding:8px; border-radius:10px; margin-bottom:10px;">
+      <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">特殊調味：</div>
+      <div id="plumOptions">
+        <span class="btn-grid-select selected" onclick="selectBtnGroup(this, 'plum')">原味/隨整包</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'plum')">加梅粉</span>
+      </div>
+    </div>
+
     <div class="qty-ctrl">
       <button class="btn-circle" onclick="changeModalQty(-1)">-</button>
       <span style="font-weight:bold; font-size:18px;" id="modalQty">1</span>
@@ -183,7 +195,6 @@
   let currentQty = 1;
 
   window.onload = function() {
-    // 1. 初始化 LIFF (相容 iOS Safari 容錯寫法，即使登入失敗也不會卡死頁面)
     if (typeof liff !== 'undefined' && MY_LIFF_ID) {
       liff.init({ liffId: MY_LIFF_ID }).then(() => {
         if (liff.isLoggedIn()) {
@@ -200,12 +211,11 @@
       });
     }
 
-    // 2. 載入菜單並檢查營業狀態
     fetch(GAS_WEB_APP_URL)
       .then(res => res.json())
       .then(resData => {
         if (!resData.isOpen) {
-          alert(resData.closeReason); // 跳出視窗告知顧客
+          alert(resData.closeReason);
           const submitBtn = document.querySelector('.btn-submit');
           if (submitBtn) {
             submitBtn.disabled = true;
@@ -300,7 +310,15 @@
       portionHtml += `<span class="btn-grid-select ${idx === 0 ? 'selected' : ''}" data-price="${p.price}" data-portion="${p.portion}" onclick="selectBtnGroup(this, 'portion')">${p.portion} ($${p.price})</span>`;
     });
     document.getElementById('portionOptions').innerHTML = portionHtml;
+    
+    // 判斷是否為雞排
     document.getElementById('chickenCustomArea').style.display = name.includes('雞排') ? 'block' : 'none';
+
+    // 判斷是否為可以加梅粉的品項：薯條、波浪薯條、地瓜薯條
+    const plumAllowedItems = ['薯條', '波浪薯條', '地瓜薯條'];
+    const isPlumAllowed = plumAllowedItems.some(itemName => name.includes(itemName));
+    document.getElementById('plumCustomArea').style.display = isPlumAllowed ? 'block' : 'none';
+
     document.getElementById('itemModal').style.display = 'flex';
   }
 
@@ -323,12 +341,25 @@
     const portion = selectedPortionEl.getAttribute('data-portion');
     const price = Number(selectedPortionEl.getAttribute('data-price'));
 
-    let note = '';
+    let notes = [];
+
+    // 雞排選項
     if (currentItemName.includes('雞排')) {
       const cut = document.querySelector('#cutOptions .selected').innerText;
       const spicy = document.querySelector('#spicyOptions .selected').innerText;
-      note = `${cut}/${spicy}`;
+      notes.push(`${cut}/${spicy}`);
     }
+
+    // 梅粉選項 (只有薯條類才會判定)
+    const plumAllowedItems = ['薯條', '波浪薯條', '地瓜薯條'];
+    if (plumAllowedItems.some(itemName => currentItemName.includes(itemName))) {
+      const plumOpt = document.querySelector('#plumOptions .selected').innerText;
+      if (plumOpt === '加梅粉') {
+        notes.push('加梅粉');
+      }
+    }
+
+    const note = notes.join(' / ');
 
     cart.push({ name: currentItemName, portion: portion, price: price, qty: currentQty, note: note });
     closeModal();
