@@ -12,15 +12,22 @@
     .btn-open { background: #27ae60; }
     .btn-close { background: #e74c3c; }
     .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
-    .order-card { background: #fff; color: #333; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-top: 6px solid #e67e22; }
+    .order-card { background: #fff; color: #333; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-top: 6px solid #e67e22; position: relative; }
     .order-card.new { animation: blink 1s infinite alternate; border-top-color: #e74c3c; }
+    .order-card.completed { opacity: 0.5; border-top-color: #95a5a6; background: #ecf0f1; }
     @keyframes blink { from { box-shadow: 0 0 5px #e74c3c; } to { box-shadow: 0 0 20px #e74c3c; } }
-    .order-no { font-size: 24px; font-weight: bold; color: #d35400; display: flex; justify-content: space-between; }
+    .order-no { font-size: 24px; font-weight: bold; color: #d35400; display: flex; justify-content: space-between; align-items: center; }
     .cust-info { font-size: 14px; color: #7f8c8d; margin: 8px 0; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
     .items-box { font-size: 16px; white-space: pre-line; font-weight: bold; line-height: 1.5; margin-bottom: 10px; background: #fffdf5; padding: 10px; border-radius: 8px; border: 1px solid #f9e79f; }
     .remark-box { font-size: 14px; font-weight: bold; color: #c0392b; background: #fadbd8; padding: 8px 10px; border-radius: 6px; margin-bottom: 12px; }
-    .btn-action { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    .btn-print { background: #3498db; color: white; margin-bottom: 6px; }
+    .btn-group { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+    .btn-print { background: #3498db; }
+    .btn-done { background: #27ae60; }
+    .btn-done:disabled { background: #bdc3c7; cursor: not-allowed; }
+    .status-tag { font-size: 14px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+    .tag-pending { background: #f39c12; color: white; }
+    .tag-done { background: #7f8c8d; color: white; }
   </style>
 </head>
 <body>
@@ -28,7 +35,7 @@
 <div class="header">
   <h2>🍗 阿力香雞排 - 廚房接單看板</h2>
   <div style="display: flex; align-items: center;">
-    <span class="status-badge" id="soundStatus">🗣️ 語音監控中</span>
+    <span class="status-badge" id="soundStatus">🗣️ 語音/列印監控中</span>
     <button id="toggleBtn" class="btn-toggle btn-open" onclick="toggleShopStatus()">🟢 營業中 (點擊改公休)</button>
     <button onclick="speakNewOrder()" style="padding: 6px 12px; margin-left: 10px; cursor: pointer; font-weight: bold; border-radius: 8px; border: none; background: #f39c12; color: white;">🔊 測試語音</button>
   </div>
@@ -63,43 +70,71 @@
         updateToggleBtnUI();
 
         let gridHtml = '';
-        let hasNew = false;
 
         orders.forEach(ord => {
           const orderNoStr = String(ord.orderNo);
-          if (!knownOrders.has(orderNoStr)) {
-            if (knownOrders.size > 0) hasNew = true;
-            knownOrders.add(orderNoStr);
-          }
-
-          // 修正欄位取值：使用 itemsDetail 與 remark
+          const isCompleted = ord.status === '已完成';
           const itemsText = ord.itemsDetail || ord.items || '';
           const remarkText = ord.remark || '';
           const displayTime = String(ord.time || '');
 
+          // 自動列印與語音廣播（僅對新進來的待處理單）
+          if (!knownOrders.has(orderNoStr)) {
+            if (knownOrders.size > 0 && !isCompleted) {
+              speakNewOrder();
+              // 自動印單
+              printCard(ord.orderNo, displayTime, ord.name, ord.phone, itemsText, remarkText, ord.totalPrice);
+            }
+            knownOrders.add(orderNoStr);
+          }
+
           gridHtml += `
-            <div class="order-card ${ord.status === '待處理' ? 'new' : ''}">
+            <div class="order-card ${isCompleted ? 'completed' : (ord.status === '待處理' ? 'new' : '')}" id="card-${ord.orderNo}">
               <div class="order-no">
                 <span>取單號：#${ord.orderNo}</span>
-                <span style="font-size: 20px; color:#27ae60;">$${ord.totalPrice}</span>
+                <div>
+                  <span class="status-tag ${isCompleted ? 'tag-done' : 'tag-pending'}">${ord.status}</span>
+                  <span style="font-size: 20px; color:#27ae60; margin-left: 5px;">$${ord.totalPrice}</span>
+                </div>
               </div>
               <div class="cust-info">
                 ⏰ ${displayTime} | 👤 ${ord.name} (${ord.phone})
               </div>
               <div class="items-box">${itemsText}</div>
               ${remarkText ? `<div class="remark-box">📝 備註：${remarkText}</div>` : ''}
-              <button class="btn-action btn-print" onclick="printCard('${ord.orderNo}', '${displayTime}', '${ord.name}', '${ord.phone}', \`${itemsText.replace(/`/g, '')}\`, '${remarkText.replace(/`/g, '')}', ${ord.totalPrice})">🖨️ 列印單據</button>
+              
+              <div class="btn-group">
+                <button class="btn-action btn-print" onclick="printCard('${ord.orderNo}', '${displayTime}', '${ord.name}', '${ord.phone}', \`${itemsText.replace(/`/g, '')}\`, '${remarkText.replace(/`/g, '')}', ${ord.totalPrice})">🖨️ 列印單據</button>
+                <button class="btn-action btn-done" ${isCompleted ? 'disabled' : ''} onclick="markOrderDone('${ord.orderNo}')">
+                  ${isCompleted ? '已完成' : '✅ 完成(出餐)'}
+                </button>
+              </div>
             </div>
           `;
         });
 
         document.getElementById('orderGrid').innerHTML = gridHtml || '<div style="color: #bdc3c7;">目前尚無新訂單</div>';
-        if (hasNew) speakNewOrder();
       })
       .catch(err => {
         console.error("讀取訂單失敗：", err);
         document.getElementById('orderGrid').innerHTML = '<div style="color: #e74c3c;">連線失敗，正在重試...</div>';
       });
+  }
+
+  // 點擊「完成」更新試算表進度
+  function markOrderDone(orderNo) {
+    if (confirm(`確定訂單 #${orderNo} 已完成出餐嗎？`)) {
+      fetch(`${GAS_WEB_APP_URL}?action=updateOrderStatus&orderNo=${encodeURIComponent(orderNo)}&status=${encodeURIComponent('已完成')}`)
+        .then(res => res.json())
+        .then(res => {
+          if (res.success) {
+            fetchOrders(); // 重新整理看板
+          } else {
+            alert("更新狀態失敗，請重試");
+          }
+        })
+        .catch(err => alert("連線錯誤：" + err));
+    }
   }
 
   function toggleShopStatus() {
@@ -130,6 +165,10 @@
 
   function printCard(no, time, name, phone, items, remark, total) {
     const printWin = window.open('', '', 'width=400,height=600');
+    if (!printWin) {
+      alert("瀏覽器阻擋了彈出視窗，請在網址列右側允許開啟彈出視窗以自動列印！");
+      return;
+    }
     printWin.document.write(`
       <html>
         <head>
