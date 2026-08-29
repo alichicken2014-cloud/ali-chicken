@@ -92,6 +92,9 @@
       border: 2px solid #f39c12; border-radius: 12px; margin-bottom: 8px;
       font-size: 16px; font-weight: bold; color: #333; outline: none;
     }
+    textarea.input-box-large {
+      height: 70px; resize: none; font-weight: normal; font-size: 14px;
+    }
     .btn-submit { width: 100%; height: 50px; background: #27ae60; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 15px; cursor: pointer; }
   </style>
 </head>
@@ -129,6 +132,9 @@
     <label class="input-label" for="custPhone">📞 電話：</label>
     <input type="tel" id="custPhone" class="input-box-large" placeholder="請輸入聯絡電話 (必填)" maxlength="10" required>
     
+    <label class="input-label" for="custRemark">📝 訂單備註 (選填)：</label>
+    <textarea id="custRemark" class="input-box-large" placeholder="如：大約幾點取餐、其他特殊需求..."></textarea>
+
     <div style="display:flex; justify-content:space-between; align-items:center; margin: 12px 0; font-weight:bold;">
       <span style="font-size:16px;">總計金額：</span>
       <span style="color:#e67e22; font-size:24px;" id="totalDisplay">$0</span>
@@ -163,11 +169,12 @@
       </div>
     </div>
 
-    <!-- 限定品項（薯條/波浪薯條/地瓜薯條）梅粉選項 -->
+    <!-- 限定品項（薯條/波浪薯條/地瓜薯條）口味選項：原味、隨整包、加梅粉 -->
     <div id="plumCustomArea" style="display:none; background:#fffdf5; padding:8px; border-radius:10px; margin-bottom:10px;">
-      <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">特殊調味：</div>
+      <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">口味選擇：</div>
       <div id="plumOptions">
-        <span class="btn-grid-select selected" onclick="selectBtnGroup(this, 'plum')">原味/隨整包</span>
+        <span class="btn-grid-select" onclick="selectBtnGroup(this, 'plum')">原味</span>
+        <span class="btn-grid-select selected" onclick="selectBtnGroup(this, 'plum')">隨整包</span>
         <span class="btn-grid-select" onclick="selectBtnGroup(this, 'plum')">加梅粉</span>
       </div>
     </div>
@@ -314,7 +321,7 @@
     // 判斷是否為雞排
     document.getElementById('chickenCustomArea').style.display = name.includes('雞排') ? 'block' : 'none';
 
-    // 判斷是否為可以加梅粉的品項：薯條、波浪薯條、地瓜薯條
+    // 判斷是否為薯條類（薯條、波浪薯條、地瓜薯條）
     const plumAllowedItems = ['薯條', '波浪薯條', '地瓜薯條'];
     const isPlumAllowed = plumAllowedItems.some(itemName => name.includes(itemName));
     document.getElementById('plumCustomArea').style.display = isPlumAllowed ? 'block' : 'none';
@@ -350,12 +357,12 @@
       notes.push(`${cut}/${spicy}`);
     }
 
-    // 梅粉選項 (只有薯條類才會判定)
+    // 薯條類選項 (原味、隨整包、加梅粉)
     const plumAllowedItems = ['薯條', '波浪薯條', '地瓜薯條'];
     if (plumAllowedItems.some(itemName => currentItemName.includes(itemName))) {
       const plumOpt = document.querySelector('#plumOptions .selected').innerText;
-      if (plumOpt === '加梅粉') {
-        notes.push('加梅粉');
+      if (plumOpt !== '隨整包') {
+        notes.push(plumOpt);
       }
     }
 
@@ -376,6 +383,7 @@
     const selectedFlavor = document.querySelector('input[name="mainFlavor"]:checked');
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
+    const remark = document.getElementById('custRemark').value.trim();
 
     if (!selectedFlavor) { alert('請點選【整包辣度調味】！'); return; }
     if (!name) { alert('請填寫【訂購人姓名】！'); return; }
@@ -393,6 +401,7 @@
     const payload = { 
       name, 
       phone, 
+      remark,
       bagFlavors, 
       items: cart, 
       totalPrice,
