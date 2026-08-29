@@ -17,7 +17,7 @@
     .order-card.completed { opacity: 0.5; border-top-color: #95a5a6; background: #ecf0f1; }
     @keyframes blink { from { box-shadow: 0 0 5px #e74c3c; } to { box-shadow: 0 0 20px #e74c3c; } }
     .order-no { font-size: 24px; font-weight: bold; color: #d35400; display: flex; justify-content: space-between; align-items: center; }
-    .cust-info { font-size: 14px; color: #7f8c8d; margin: 8px 0; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
+    .cust-info { font-size: 13px; color: #7f8c8d; margin: 8px 0; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
     .items-box { font-size: 16px; white-space: pre-line; font-weight: bold; line-height: 1.5; margin-bottom: 10px; background: #fffdf5; padding: 10px; border-radius: 8px; border: 1px solid #f9e79f; }
     .remark-box { font-size: 14px; font-weight: bold; color: #c0392b; background: #fadbd8; padding: 8px 10px; border-radius: 6px; margin-bottom: 12px; }
     .btn-group { display: flex; gap: 8px; margin-top: 10px; }
@@ -62,7 +62,6 @@
   }
 
   function fetchOrders() {
-    // 增加 redirect: 'follow' 確保能正確跟隨 GAS 的 302 轉址
     fetch(GAS_WEB_APP_URL + "?action=getLiveOrders", { method: "GET", redirect: "follow" })
       .then(res => res.json())
       .then(resData => {
@@ -77,7 +76,10 @@
           const isCompleted = ord.status === '已完成';
           const itemsText = ord.itemsDetail || ord.items || '';
           const remarkText = ord.remark || '';
-          const displayTime = String(ord.time || '');
+          
+          // 完整時間處理
+          let displayTime = String(ord.time || '');
+          if (displayTime.length > 19) displayTime = displayTime.substring(0, 19);
 
           if (!knownOrders.has(orderNoStr)) {
             if (knownOrders.size > 0 && !isCompleted) {
@@ -97,7 +99,7 @@
                 </div>
               </div>
               <div class="cust-info">
-                ⏰ ${displayTime} | 👤 ${ord.name} (${ord.phone})
+                ⏰ ${displayTime} <br>👤 ${ord.name} (${ord.phone})
               </div>
               <div class="items-box">${itemsText}</div>
               ${remarkText ? `<div class="remark-box">📝 備註：${remarkText}</div>` : ''}
@@ -116,7 +118,7 @@
       })
       .catch(err => {
         console.error("讀取訂單失敗：", err);
-        document.getElementById('orderGrid').innerHTML = `<div style="color: #e74c3c;">連線失敗 (${err.message})，正在重試...</div>`;
+        document.getElementById('orderGrid').innerHTML = `<div style="color: #e74c3c;">連線失敗，正在重試...</div>`;
       });
   }
 
