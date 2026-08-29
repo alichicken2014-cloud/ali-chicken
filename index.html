@@ -25,6 +25,7 @@
       border: 4px dashed var(--border-color);
       border-radius: 25px; padding: 16px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+      padding-bottom: 30px;
     }
     .header { text-align: center; margin-bottom: 12px; }
     .header h1 {
@@ -76,8 +77,8 @@
       background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 99;
     }
     .modal-content {
-      background: white; width: 85%; max-width: 360px; border-radius: 20px;
-      padding: 20px; border: 3px solid var(--border-color);
+      background: white; width: 85%; max-width: 380px; border-radius: 20px;
+      padding: 20px; border: 3px solid var(--border-color); max-height: 80vh; overflow-y: auto;
     }
     .modal-header { font-size: 18px; font-weight: bold; text-align: center; color: #d35400; margin-bottom: 12px; }
     .modal-row { margin-bottom: 12px; }
@@ -92,10 +93,23 @@
       border: 2px solid #f39c12; border-radius: 12px; margin-bottom: 8px;
       font-size: 16px; font-weight: bold; color: #333; outline: none;
     }
-    textarea.input-box-large {
-      height: 70px; resize: none; font-weight: normal; font-size: 14px;
+    textarea.input-box-large { height: 70px; resize: none; font-weight: normal; font-size: 14px; }
+    .btn-cart-view {
+      width: 100%; background: #e67e22; color: white; border: none; padding: 10px;
+      border-radius: 12px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px;
     }
     .btn-submit { width: 100%; height: 50px; background: #27ae60; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 15px; cursor: pointer; }
+    
+    /* 購物車清單列表樣式 */
+    .cart-item-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px dashed #eee;
+    }
+    .cart-item-info { text-align: left; font-size: 14px; }
+    .cart-item-title { font-weight: bold; color: #333; }
+    .cart-item-sub { font-size: 12px; color: #777; margin-top: 2px; }
+    .cart-item-ctrl { display: flex; align-items: center; gap: 8px; }
+    .btn-del { background: #e74c3c; color: white; border: none; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -126,6 +140,8 @@
   <div class="grid-menu" id="gridMenu">載入菜單中...</div>
 
   <div class="footer">
+    <button class="btn-cart-view" onclick="openCartModal()">🛒 查看/修改購物車 (<span id="cartCount">0</span>件)</button>
+
     <label class="input-label" for="custName">👤 訂購人：</label>
     <input type="text" id="custName" class="input-box-large" placeholder="請輸入姓名 (必填)" required>
     
@@ -143,6 +159,7 @@
   </div>
 </div>
 
+<!-- 點餐彈窗 -->
 <div class="modal-overlay" id="itemModal">
   <div class="modal-content">
     <div class="modal-header" id="modalItemName">商品名稱</div>
@@ -169,7 +186,7 @@
       </div>
     </div>
 
-    <!-- 限定品項（薯條/波浪薯條/地瓜薯條）口味選項：原味、隨整包、加梅粉 -->
+    <!-- 薯條類選項 -->
     <div id="plumCustomArea" style="display:none; background:#fffdf5; padding:8px; border-radius:10px; margin-bottom:10px;">
       <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">口味選擇：</div>
       <div id="plumOptions">
@@ -185,7 +202,20 @@
       <button class="btn-circle" onclick="changeModalQty(1)">+</button>
     </div>
     <button class="btn-submit" style="background:#f39c12; height:44px; font-size:16px;" onclick="saveItemToCart()">加入購物車</button>
-    <button style="width:100%; border:none; background:none; color:#888; margin-top:8px; cursor:pointer;" onclick="closeModal()">取消</button>
+    <button style="width:100%; border:none; background:none; color:#888; margin-top:8px; cursor:pointer;" onclick="closeModal('itemModal')">取消</button>
+  </div>
+</div>
+
+<!-- 購物車管理彈窗 -->
+<div class="modal-overlay" id="cartModal">
+  <div class="modal-content">
+    <div class="modal-header">🛒 已選購餐點明細</div>
+    <div id="cartListArea">購物車是空的</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0 10px 0; font-weight:bold; font-size:16px;">
+      <span>合計金額：</span>
+      <span style="color:#e67e22;" id="cartModalTotal">$0</span>
+    </div>
+    <button class="btn-submit" style="background:#27ae60; height:44px; font-size:16px;" onclick="closeModal('cartModal')">確定 / 繼續點餐</button>
   </div>
 </div>
 
@@ -318,10 +348,8 @@
     });
     document.getElementById('portionOptions').innerHTML = portionHtml;
     
-    // 判斷是否為雞排
     document.getElementById('chickenCustomArea').style.display = name.includes('雞排') ? 'block' : 'none';
 
-    // 判斷是否為薯條類（薯條、波浪薯條、地瓜薯條）
     const plumAllowedItems = ['薯條', '波浪薯條', '地瓜薯條'];
     const isPlumAllowed = plumAllowedItems.some(itemName => name.includes(itemName));
     document.getElementById('plumCustomArea').style.display = isPlumAllowed ? 'block' : 'none';
@@ -329,8 +357,8 @@
     document.getElementById('itemModal').style.display = 'flex';
   }
 
-  function closeModal() {
-    document.getElementById('itemModal').style.display = 'none';
+  function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
   }
 
   function selectBtnGroup(el, groupType) {
@@ -350,14 +378,12 @@
 
     let notes = [];
 
-    // 雞排選項
     if (currentItemName.includes('雞排')) {
       const cut = document.querySelector('#cutOptions .selected').innerText;
       const spicy = document.querySelector('#spicyOptions .selected').innerText;
       notes.push(`${cut}/${spicy}`);
     }
 
-    // 薯條類選項 (原味、隨整包、加梅粉)
     const plumAllowedItems = ['薯條', '波浪薯條', '地瓜薯條'];
     if (plumAllowedItems.some(itemName => currentItemName.includes(itemName))) {
       const plumOpt = document.querySelector('#plumOptions .selected').innerText;
@@ -369,14 +395,65 @@
     const note = notes.join(' / ');
 
     cart.push({ name: currentItemName, portion: portion, price: price, qty: currentQty, note: note });
-    closeModal();
+    closeModal('itemModal');
     renderGrid();
     calculateTotal();
   }
 
   function calculateTotal() {
     let total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    let totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
     document.getElementById('totalDisplay').innerText = '$' + total;
+    document.getElementById('cartCount').innerText = totalQty;
+    document.getElementById('cartModalTotal').innerText = '$' + total;
+  }
+
+  // 開啟購物車預覽彈窗
+  function openCartModal() {
+    const cartListArea = document.getElementById('cartListArea');
+    if (cart.length === 0) {
+      cartListArea.innerHTML = '<div style="text-align:center; color:#999; padding:20px 0;">購物車內尚無餐點</div>';
+    } else {
+      let html = '';
+      cart.forEach((item, index) => {
+        html += `
+          <div class="cart-item-row">
+            <div class="cart-item-info">
+              <div class="cart-item-title">${item.name} (${item.portion})</div>
+              <div class="cart-item-sub">${item.note ? item.note + ' | ' : ''}$${item.price} x ${item.qty}</div>
+            </div>
+            <div class="cart-item-ctrl">
+              <button class="btn-circle" style="width:24px;height:24px;font-size:14px;" onclick="updateCartQty(${index}, -1)">-</button>
+              <span style="font-weight:bold; font-size:14px;">${item.qty}</span>
+              <button class="btn-circle" style="width:24px;height:24px;font-size:14px;" onclick="updateCartQty(${index}, 1)">+</button>
+              <button class="btn-del" onclick="removeCartItem(${index})">刪除</button>
+            </div>
+          </div>
+        `;
+      });
+      cartListArea.innerHTML = html;
+    }
+    calculateTotal();
+    document.getElementById('cartModal').style.display = 'flex';
+  }
+
+  // 調整購物車內特定項目的數量
+  function updateCartQty(index, delta) {
+    cart[index].qty += delta;
+    if (cart[index].qty <= 0) {
+      cart.splice(index, 1);
+    }
+    openCartModal();
+    renderGrid();
+    calculateTotal();
+  }
+
+  // 刪除購物車內項目
+  function removeCartItem(index) {
+    cart.splice(index, 1);
+    openCartModal();
+    renderGrid();
+    calculateTotal();
   }
 
   function submitOrderData() {
