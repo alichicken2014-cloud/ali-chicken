@@ -47,7 +47,7 @@
     .btn-print-sys { background-color: #475569; color: #e2e8f0; }
     .btn-finish { background-color: #22c55e; color: white; grid-column: span 2; font-size: 1rem; padding: 12px; margin-top: 4px; }
     
-    /* 傳統網頁列印專用隱藏區域 (給電腦使用) */
+    /* 傳統網頁列印專用區域 (給電腦 Chrome 使用) */
     #print-area { display: none; }
     @media print {
       body * { visibility: hidden; }
@@ -66,7 +66,7 @@
     <h1>🍗 阿力香雞排 - 廚房接單看板</h1>
     <div class="status-bar">
       <button id="voice-btn" class="status-btn bg-purple" onclick="toggleVoice()">🔊 語音監控中</button>
-      <button id="shop-btn" class="status-btn bg-green" onclick="toggleShopStatus()">營業中 (點擊改公休)</button>
+      <button id="shop-btn" class="status-btn bg-green" onclick="toggleShopStatus()">營業中 (點擊改暫停)</button>
       <button class="status-btn bg-purple" onclick="testAudio()">🔊 測試語音</button>
     </div>
   </header>
@@ -79,38 +79,65 @@
   <div id="print-area"></div>
 
   <script>
-    // ⚠️ 請填寫您部署好的 GAS Web App 網址
+    // ⚠️ 請填寫您部署好的 GAS Web App 網址 (/exec 結尾)
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwqoInK1ZfC3S937jA3Y9_51p3X7c61Iu8O9K2lC8k-vJ9p/exec"; 
 
     let voiceEnabled = true;
     let knownOrders = new Set();
     let currentShopStatus = "正常";
+    let isFetching = false;
 
-    // 1. 初始化與定時輪詢 (每 5 秒刷新一次)
     window.onload = () => {
+      // 1. 先讀取本地快取，讓畫面「秒開」不等待
+      const cachedData = localStorage.getItem("kitchen_orders_cache");
+      if (cachedData) {
+        try {
+          const parsed = JSON.parse(cachedData);
+          renderOrders(parsed.orders || [], false);
+        } catch (e) {}
+      }
+
+      // 2. 啟動定時輪詢 (每 5 秒刷新一次)
       fetchOrders();
       setInterval(fetchOrders, 5000);
     };
 
-    // 2. 抓取最新訂單
+    // 抓取最新訂單
     async function fetchOrders() {
+      if (isFetching) return;
+      isFetching = true;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒超時保護
+
       try {
-        const res = await fetch(`${GAS_API_URL}?action=getLiveOrders`);
+        const res = await fetch(`${GAS_API_URL}?action=getLiveOrders`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
         const data = await res.json();
         
         currentShopStatus = data.status || "正常";
         updateShopBtnUI();
 
         if (data.orders) {
-          renderOrders(data.orders);
+          localStorage.setItem("kitchen_orders_cache", JSON.stringify(data));
+          renderOrders(data.orders, true);
         }
       } catch (err) {
-        console.error("抓取訂單失敗：", err);
+        if (err.name === 'AbortError') {
+          console.warn("GAS 請求超時，等待下次輪詢...");
+        } else {
+          console.error("抓取訂單失敗：", err);
+        }
+      } finally {
+        isFetching = false;
       }
     }
 
-    // 3. 渲染訂單卡片
-    function renderOrders(orders) {
+    // 渲染訂單卡片
+    function renderOrders(orders, shouldPlayVoice = true) {
       const container = document.getElementById("orders-container");
       if (!orders || orders.length === 0) {
         container.innerHTML = '<p style="color: #94a3b8; font-size: 1.1rem;">目前尚無訂單</p>';
@@ -124,7 +151,6 @@
         const isPending = ord.status === "待處理";
         const orderKey = `${ord.orderNo}_${ord.time}`;
 
-        // 判斷是否為新訂單，觸發語音
         if (isPending && !knownOrders.has(orderKey)) {
           hasNewOrder = true;
           knownOrders.add(orderKey);
@@ -158,13 +184,13 @@
 
       container.innerHTML = html;
 
-      // 如果有新進訂單，發出播報
-      if (hasNewOrder && voiceEnabled) {
+      // 新訂單播報語音
+      if (hasNewOrder && voiceEnabled && shouldPlayVoice) {
         playAlertSound();
       }
     }
 
-    // 4. 【手機專用】直連 RawBT 一鍵秒印 (完全不跳 Android 列印預覽)
+    // 📱 手機專用：繞過預覽視窗，直連 RawBT 一鍵秒印
     function printRawBT(no, time, name, phone, items, remark, price) {
       const text = 
 `==============================
@@ -179,12 +205,11 @@ ${items}
 ${remark ? '備註：' + remark + '\n------------------------------\n' : ''}總金額：$${price}
 ==============================\n\n\n`;
 
-      // 透過 intent 協議喚醒 RawBT App 進行背景秒印
       const rawbtUrl = "intent:#Intent;scheme=rawbt;package=ru.a4040.rawbt;S.txt=" + encodeURIComponent(text) + ";end;";
       window.location.href = rawbtUrl;
     }
 
-    // 5. 【電腦專用】傳統網頁視窗列印
+    // 💻 電腦專用：傳統視窗列印
     function printSys(no, time, name, phone, items, remark, price) {
       const printArea = document.getElementById("print-area");
       printArea.innerHTML = `
@@ -203,7 +228,7 @@ ${remark ? '備註：' + remark + '\n------------------------------\n' : ''}總�
       window.print();
     }
 
-    // 6. 更新訂單狀態為已完成
+    // 完成訂單
     async function completeOrder(orderNo) {
       try {
         await fetch(`${GAS_API_URL}?action=updateOrderStatus&orderNo=${orderNo}&status=已完成`);
@@ -213,7 +238,7 @@ ${remark ? '備註：' + remark + '\n------------------------------\n' : ''}總�
       }
     }
 
-    // 7. 店家營業狀態控制
+    // 店家營業狀態切換
     async function toggleShopStatus() {
       const nextStatus = (currentShopStatus === "正常") ? "暫停營業" : "正常";
       if (!confirm(`確定要將店家狀態改為【${nextStatus}】嗎？`)) return;
@@ -238,7 +263,7 @@ ${remark ? '備註：' + remark + '\n------------------------------\n' : ''}總�
       }
     }
 
-    // 8. 語音提示功能
+    // 語音播報
     function playAlertSound() {
       const msg = new SpeechSynthesisUtterance("新訂單來囉！請確認廚房看板");
       msg.lang = "zh-TW";
