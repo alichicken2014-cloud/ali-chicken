@@ -7,181 +7,74 @@
   <style>
     * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: #121212;
       color: #ffffff;
-      margin: 0;
-      padding: 15px;
+      margin: 0; padding: 15px;
     }
-
-    /* 頂部導覽列 */
     .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #1e1e1e;
-      padding: 15px 20px;
-      border-radius: 12px;
-      margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: #1e1e1e; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
-    .header h1 {
-      margin: 0;
-      font-size: 26px;
-      color: #f39c12;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .header h1 { margin: 0; font-size: 24px; color: #f39c12; }
+    .status-info { display: flex; align-items: center; gap: 12px; }
+    
+    /* 營業狀態控制按鈕 */
+    .btn-toggle-store {
+      border: none; padding: 10px 16px; border-radius: 8px; font-size: 16px;
+      font-weight: bold; cursor: pointer; color: white; transition: 0.2s;
     }
-    .status-info {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    .status-tag {
-      font-size: 14px;
-      color: #aaa;
-    }
-    .refresh-btn {
-      background: #27ae60;
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 16px;
-      transition: background 0.2s;
-    }
-    .refresh-btn:hover { background: #219150; }
+    .btn-open { background: #27ae60; }
+    .btn-open:hover { background: #219150; }
+    .btn-close { background: #e74c3c; }
+    .btn-close:hover { background: #c0392b; }
 
-    /* 訂單卡片網格 */
+    .refresh-btn {
+      background: #34495e; color: white; border: none; padding: 10px 14px;
+      border-radius: 8px; font-size: 15px; cursor: pointer;
+    }
+
     .grid-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 15px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;
     }
     .order-card {
-      background: #242424;
-      border: 2px solid #3d3d3d;
-      border-radius: 12px;
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      background: #242424; border: 2px solid #3d3d3d; border-radius: 12px; padding: 15px;
+      display: flex; flex-direction: column; justify-content: space-between;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      transition: transform 0.2s, border-color 0.2s;
     }
-    .order-card:hover {
-      border-color: #f39c12;
-    }
-
-    /* 卡片頭部 */
     .order-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid #333;
-      padding-bottom: 10px;
-      margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px;
     }
-    .order-no {
-      font-size: 32px;
-      font-weight: 900;
-      color: #f1c40f;
-    }
-    .order-time {
-      font-size: 14px;
-      color: #bbb;
-      background: #333;
-      padding: 4px 8px;
-      border-radius: 6px;
-    }
-    .order-cust {
-      font-size: 16px;
-      color: #eee;
-      margin-bottom: 8px;
-      font-weight: bold;
-    }
-
-    /* 餐點明細區域 */
+    .order-no { font-size: 32px; font-weight: 900; color: #f1c40f; }
+    .order-time { font-size: 14px; color: #bbb; background: #333; padding: 4px 8px; border-radius: 6px; }
+    .order-cust { font-size: 16px; color: #eee; margin-bottom: 8px; font-weight: bold; }
     .order-items {
-      font-size: 17px;
-      line-height: 1.6;
-      white-space: pre-line;
-      background: #181818;
-      padding: 12px;
-      border-radius: 8px;
-      color: #fff;
-      margin-bottom: 12px;
-      flex-grow: 1;
+      font-size: 17px; line-height: 1.6; white-space: pre-line; background: #181818;
+      padding: 12px; border-radius: 8px; color: #fff; margin-bottom: 12px; flex-grow: 1;
       border-left: 4px solid #f39c12;
     }
+    .order-remark { background: #c0392b; color: white; padding: 8px 12px; border-radius: 6px; font-size: 15px; margin-bottom: 12px; font-weight: bold; }
+    .btn-group { display: flex; gap: 10px; }
+    .btn-print { background: #2980b9; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; }
+    .btn-finish { background: #27ae60; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 2; font-size: 17px; }
 
-    /* 備註區域 */
-    .order-remark {
-      background: #c0392b;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 15px;
-      margin-bottom: 12px;
-      font-weight: bold;
-    }
-
-    /* 按鈕組 */
-    .btn-group {
-      display: flex;
-      gap: 10px;
-    }
-    .btn-print {
-      background: #2980b9;
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      flex: 1;
-      font-size: 15px;
-    }
-    .btn-print:hover { background: #1f618d; }
-    .btn-finish {
-      background: #27ae60;
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      flex: 2;
-      font-size: 17px;
-    }
-    .btn-finish:hover { background: #1e8449; }
-
-    /* 出單機 / 熱感應列印專用樣式 */
     @media print {
       body * { visibility: hidden; }
       #printArea, #printArea * { visibility: visible; }
-      #printArea {
-        position: absolute;
-        left: 0; top: 0;
-        width: 100%;
-        color: #000;
-        background: #fff;
-        padding: 5px;
-        font-family: monospace, sans-serif;
-      }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; padding: 5px; font-family: monospace; }
     }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>🍳 阿力香雞排 - 廚房出餐看板</h1>
+  <h1>🍳 阿力香雞排 - 廚房看板</h1>
   <div class="status-info">
-    <span class="status-tag" id="lastUpdated">載入中...</span>
-    <button class="refresh-btn" onclick="fetchOrders()">🔄 手動重新整理</button>
+    <!-- 切換營業狀態按鈕 -->
+    <button id="toggleStoreBtn" class="btn-toggle-store btn-open" onclick="toggleStoreStatus()">🟢 營業中 (點擊公休)</button>
+    <button class="refresh-btn" onclick="fetchOrders()">🔄 重新整理</button>
   </div>
 </div>
 
@@ -191,82 +84,114 @@
   </div>
 </div>
 
-<!-- 新單提示音 -->
 <audio id="audioNotice" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
-
-<!-- 隱藏的列印緩衝區 -->
 <div id="printArea" style="display:none;"></div>
 
 <script>
-  // ⚠️ 請填入您最新的 Google Apps Script (GAS) 部署網址
+  // ⚠️ 請填入您最新部署的 GAS 網址
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
 
-  let knownOrderNos = new Set(); // 記錄已列印或處理過的單號
+  let knownOrderNos = new Set();
   let isFirstLoad = true;
+  let currentIsOpen = true;
 
   function fetchOrders() {
-    document.getElementById('lastUpdated').innerText = '資料更新中...';
-    
     fetch(GAS_WEB_APP_URL + "?action=getKitchenData")
       .then(res => res.json())
       .then(data => {
-        const now = new Date();
-        document.getElementById('lastUpdated').innerText = '最後更新：' + now.toLocaleTimeString();
+        if (data.success) {
+          // 更新營業狀態按鈕顯示
+          updateStoreBtn(data.isOpen);
 
-        if (data.success && data.orders) {
           let hasNewOrder = false;
           let newestOrder = null;
 
-          // 比對是否有全新未處理的訂單
-          data.orders.forEach(order => {
-            if (!knownOrderNos.has(order.orderNo)) {
-              knownOrderNos.add(order.orderNo);
-              if (!isFirstLoad) {
-                hasNewOrder = true;
-                newestOrder = order;
+          if (data.orders) {
+            data.orders.forEach(order => {
+              if (!knownOrderNos.has(order.orderNo)) {
+                knownOrderNos.add(order.orderNo);
+                if (!isFirstLoad) {
+                  hasNewOrder = true;
+                  newestOrder = order;
+                }
               }
+            });
+
+            renderOrders(data.orders);
+
+            if (!isFirstLoad && hasNewOrder && newestOrder) {
+              playAlertSound();
+              printReceipt(newestOrder);
             }
-          });
-
-          renderOrders(data.orders);
-
-          // 若發現新訂單：播放提示音 + 觸發自動出單列印
-          if (!isFirstLoad && hasNewOrder && newestOrder) {
-            playAlertSound();
-            autoPrintReceipt(newestOrder);
           }
-
           isFirstLoad = false;
-        } else {
-          document.getElementById('ordersGrid').innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#e74c3c; font-size:20px;">讀取訂單失敗，請檢查網路連線</div>';
         }
       })
-      .catch(err => {
-        console.error(err);
-        document.getElementById('lastUpdated').innerText = '更新失敗';
-      });
+      .catch(err => console.error(err));
   }
 
-  // 播放提示聲
-  function playAlertSound() {
-    const audio = document.getElementById('audioNotice');
-    if (audio) {
-      audio.play().catch(e => console.log('請先點擊頁面一次以解鎖瀏覽器自動播放權限'));
+  // 切換營業狀態 (開啟 / 臨時公休)
+  function toggleStoreStatus() {
+    const targetState = !currentIsOpen;
+    const actionText = targetState ? "開啟營業（允許顧客點餐）" : "臨時公休（暫停顧客點餐）";
+    
+    if (!confirm(`確定要切換為【${actionText}】嗎？`)) return;
+
+    const btn = document.getElementById('toggleStoreBtn');
+    btn.disabled = true;
+    btn.innerText = "處理中...";
+
+    fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'toggleStoreStatus',
+        isOpen: targetState
+      })
+    })
+    .then(res => res.json())
+    .then(res => {
+      btn.disabled = false;
+      if (res.success) {
+        updateStoreBtn(res.isOpen);
+        alert(`已切換狀態為：${res.isOpen ? '🟢 營業中' : '🔴 臨時公休'}`);
+      } else {
+        alert('切換失敗：' + res.error);
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      alert('連線失敗，請重試');
+    });
+  }
+
+  function updateStoreBtn(isOpen) {
+    currentIsOpen = isOpen;
+    const btn = document.getElementById('toggleStoreBtn');
+    if (isOpen) {
+      btn.className = "btn-toggle-store btn-open";
+      btn.innerText = "🟢 營業中 (點擊公休)";
+    } else {
+      btn.className = "btn-toggle-store btn-close";
+      btn.innerText = "🔴 臨時公休中 (點擊營業)";
     }
   }
 
-  // 渲染訂單卡片畫面
+  function playAlertSound() {
+    const audio = document.getElementById('audioNotice');
+    if (audio) { audio.play().catch(e => {}); }
+  }
+
   function renderOrders(orders) {
     const grid = document.getElementById('ordersGrid');
     if (orders.length === 0) {
-      grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#888; padding:60px; font-size:22px;">🎉 目前沒有待製作的訂單，休息一下吧！</div>';
+      grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#888; padding:60px; font-size:22px;">🎉 目前沒有待製作訂單</div>';
       return;
     }
 
     let html = '';
     orders.forEach(order => {
       const orderJson = JSON.stringify(order).replace(/'/g, "&apos;");
-
       html += `
         <div class="order-card">
           <div>
@@ -280,17 +205,12 @@
           </div>
           <div class="btn-group">
             <button class="btn-print" onclick='printReceipt(${orderJson})'>🖨️ 列印</button>
-            <button class="btn-finish" onclick="completeOrder(${order.rowIndex}, this)">✅ 出餐完成</button>
+            <button class="btn-finish" onclick="completeOrder(${order.rowIndex}, this)">✅ 完成</button>
           </div>
         </div>
       `;
     });
     grid.innerHTML = html;
-  }
-
-  // 觸發列印（包含自動列印與手動點擊列印）
-  function autoPrintReceipt(order) {
-    printReceipt(order);
   }
 
   function printReceipt(order) {
@@ -303,59 +223,33 @@
       <div>顧客：${order.name} (${order.phone})</div>
       ${order.remark ? `<div style="font-weight:bold;">備註：${order.remark}</div>` : ''}
       <hr style="border:none; border-top:1px dashed #000; margin: 5px 0;">
-      <div style="font-size:16px; white-space:pre-line; font-weight:bold; line-height:1.4;">${order.itemsDetail}</div>
+      <div style="font-size:16px; white-space:pre-line; font-weight:bold;">${order.itemsDetail}</div>
       <hr style="border:none; border-top:1px dashed #000; margin: 5px 0;">
       <div style="font-size:18px; font-weight:bold; text-align:right;">合計：$${order.totalPrice}</div>
     `;
-    
     printArea.style.display = 'block';
     window.print();
-    
-    setTimeout(() => {
-      printArea.style.display = 'none';
-    }, 500);
+    setTimeout(() => { printArea.style.display = 'none'; }, 500);
   }
 
-  // 點擊「出餐完成」
   function completeOrder(rowIndex, btnEl) {
     if (!confirm('確定此單已製作完成？')) return;
-
     btnEl.disabled = true;
     btnEl.innerText = '處理中...';
 
     fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'updateOrderStatus',
-        rowIndex: rowIndex,
-        status: '已完成'
-      })
+      body: JSON.stringify({ action: 'updateOrderStatus', rowIndex: rowIndex, status: '已完成' })
     })
     .then(res => res.json())
     .then(res => {
-      if (res.success) {
-        fetchOrders(); // 重新載入，該單會自動消失
-      } else {
-        alert('修改狀態失敗：' + res.error);
-        btnEl.disabled = false;
-        btnEl.innerText = '✅ 出餐完成';
-      }
-    })
-    .catch(err => {
-      alert('網路連線失敗，請重試');
-      btnEl.disabled = false;
-      btnEl.innerText = '✅ 出餐完成';
+      if (res.success) fetchOrders();
     });
   }
 
-  // 1. 初次載入
   fetchOrders();
-
-  // 2. 每 10 秒自動檢查一次新訂單
   setInterval(fetchOrders, 10000);
-
-  // 3. 使用者開起網頁後點擊任意地方解鎖音效權限
   document.body.addEventListener('click', () => {
     const audio = document.getElementById('audioNotice');
     if (audio) { audio.load(); }
