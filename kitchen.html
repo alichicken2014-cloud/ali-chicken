@@ -47,7 +47,7 @@
     .btn-print-sys { background-color: #0284c7; color: white; }
     .btn-finish { background-color: #22c55e; color: white; font-size: 0.9rem; }
     
-    /* 系統列印區域樣式 (熱感應紙 58mm / 80mm 適用) */
+    /* 系統列印區域樣式 (適用熱感應紙) */
     #print-area { display: none; }
     @media print {
       body * { visibility: hidden; }
@@ -79,19 +79,19 @@
   <div id="print-area"></div>
 
   <script>
-    // ⚠️ 請填寫您最新部署好的 GAS Web App 網址 (/exec 結尾)
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwqoInK1ZfC3S937jA3Y9_51p3X7c61Iu8O9K2lC8k-vJ9p/exec"; 
+    // 已更新為最新的 GAS Web App 網址
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwmW6zrV40Qsyz5fBVqELlZBG48hwvt2mvZNWQd0mITEh2fcgaaDzd9ZsjqgshAzxbVwg/exec"; 
 
     let voiceEnabled = true;
     let autoPrintEnabled = true; // 是否開啟自動列印
     let knownOrders = new Set();
     let currentShopStatus = "正常";
     let isFetching = false;
-    let isFirstLoad = true; // 第一次載入不自動列印舊訂單
+    let isFirstLoad = true; // 第一次開啟不重複列印舊訂單
 
     window.onload = () => {
       fetchOrders();
-      setInterval(fetchOrders, 5000); // 5秒自動刷新一次
+      setInterval(fetchOrders, 5000); // 每 5 秒檢查一次新訂單
     };
 
     async function fetchOrders() {
@@ -130,11 +130,11 @@
         const isPending = ord.status === "待處理";
         const orderKey = `${ord.orderNo}_${ord.time}`;
 
-        // 偵測是否為全新進來的訂單
+        // 判斷是否為剛進來的新訂單
         if (isPending && !knownOrders.has(orderKey)) {
           knownOrders.add(orderKey);
           if (!isFirstLoad) {
-            newOrdersToPrint.push(ord); // 加入待自動列印清單
+            newOrdersToPrint.push(ord);
           }
         }
 
@@ -165,20 +165,19 @@
 
       container.innerHTML = html;
 
-      // 如果有新訂單進來
+      // 偵測到新訂單進來
       if (newOrdersToPrint.length > 0) {
         if (voiceEnabled) playAlertSound();
 
-        // 執行自動列印
+        // 觸發系統自動列印
         if (autoPrintEnabled) {
-          // 逐張自動列印新訂單
           newOrdersToPrint.forEach(ord => {
             printSys(ord.orderNo, ord.time, ord.name, ord.phone, ord.itemsDetail, ord.remark, ord.totalPrice);
           });
         }
       }
 
-      isFirstLoad = false; // 完成第一次初始化
+      isFirstLoad = false;
     }
 
     // 系統列印功能
@@ -200,7 +199,7 @@
       window.print();
     }
 
-    // 完成訂單
+    // 更新訂單為已完成
     async function completeOrder(orderNo) {
       try {
         await fetch(`${GAS_API_URL}?action=updateOrderStatus&orderNo=${orderNo}&status=已完成`);
@@ -223,7 +222,7 @@
       }
     }
 
-    // 店家營業狀態切換
+    // 切換店家營業狀態
     async function toggleShopStatus() {
       const nextStatus = (currentShopStatus === "正常") ? "暫停營業" : "正常";
       if (!confirm(`確定要將店家狀態改為【${nextStatus}】嗎？`)) return;
@@ -248,7 +247,7 @@
       }
     }
 
-    // 語音播報
+    // 語音提示
     function playAlertSound() {
       const msg = new SpeechSynthesisUtterance("新訂單來囉！");
       msg.lang = "zh-TW";
