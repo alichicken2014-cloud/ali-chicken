@@ -214,22 +214,51 @@
   }
 
   function printReceipt(order) {
-    const printArea = document.getElementById('printArea');
-    printArea.innerHTML = `
-      <div style="text-align:center; font-size:18px; font-weight:bold;">阿力香雞排 崑山店</div>
-      <div style="text-align:center; font-size:26px; font-weight:bold; margin: 4px 0;">單號：#${order.orderNo}</div>
-      <hr style="border:none; border-top:1px dashed #000; margin: 5px 0;">
-      <div>時間：${order.time}</div>
-      <div>顧客：${order.name} (${order.phone})</div>
-      ${order.remark ? `<div style="font-weight:bold;">備註：${order.remark}</div>` : ''}
-      <hr style="border:none; border-top:1px dashed #000; margin: 5px 0;">
-      <div style="font-size:16px; white-space:pre-line; font-weight:bold;">${order.itemsDetail}</div>
-      <hr style="border:none; border-top:1px dashed #000; margin: 5px 0;">
-      <div style="font-size:18px; font-weight:bold; text-align:right;">合計：$${order.totalPrice}</div>
-    `;
-    printArea.style.display = 'block';
-    window.print();
-    setTimeout(() => { printArea.style.display = 'none'; }, 500);
+    // 建立一個全新的獨立空白視窗，專門給 RawBT 抓取，避免 CSS 干擾
+    const printWin = window.open('', '', 'width=300,height=500');
+    
+    printWin.document.write(`
+      <html>
+      <head>
+        <title>列印單據</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            width: 100%;
+            margin: 0;
+            padding: 5px;
+            color: #000000;
+            background: #ffffff;
+          }
+          .title { font-size: 20px; font-weight: bold; text-align: center; }
+          .no { font-size: 28px; font-weight: bold; text-align: center; margin: 5px 0; }
+          .line { border-bottom: 1px dashed #000; margin: 8px 0; }
+          .detail { font-size: 16px; font-weight: bold; line-height: 1.5; white-space: pre-line; }
+          .total { font-size: 20px; font-weight: bold; text-align: right; margin-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="title">阿力香雞排 崑山店</div>
+        <div class="no">#${order.orderNo}</div>
+        <div>下單時間：${order.time}</div>
+        <div>顧客：${order.name} (${order.phone})</div>
+        ${order.remark ? `<div style="font-weight:bold; color:red;">備註：${order.remark}</div>` : ''}
+        <div class="line"></div>
+        <div class="detail">${order.itemsDetail}</div>
+        <div class="line"></div>
+        <div class="total">總金額：$${order.totalPrice}</div>
+      </body>
+      </html>
+    `);
+
+    printWin.document.close();
+    printWin.focus();
+    
+    // 延遲 200ms 等待內容渲染完畢後觸發列印，印完自動關閉小視窗
+    setTimeout(() => {
+      printWin.print();
+      printWin.close();
+    }, 200);
   }
 
   function completeOrder(rowIndex, btnEl) {
