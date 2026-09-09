@@ -3,268 +3,203 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>阿力香雞排 - 廚房接單看板</title>
+  <title>阿力香雞排 - 廚房即時出餐看板</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #1e293b; color: #f8fafc; padding: 20px; }
-    
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #334155; }
-    h1 { font-size: 1.5rem; color: #f8fafc; display: flex; align-items: center; gap: 10px; }
-    
-    .status-bar { display: flex; gap: 10px; align-items: center; }
-    .status-btn { padding: 8px 16px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
-    .bg-green { background-color: #22c55e; color: white; }
-    .bg-red { background-color: #ef4444; color: white; }
-    .bg-purple { background-color: #a855f7; color: white; }
-    .bg-blue { background-color: #0284c7; color: white; }
-    .bg-gray { background-color: #64748b; color: white; }
-    
-    .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-    
-    .order-card { background-color: #334155; border-radius: 12px; border: 2px solid #475569; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
-    .order-card.pending { border-color: #ef4444; animation: pulse 2s infinite; }
-    
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #1e1e1e;
+      color: #fff;
+      margin: 0;
+      padding: 15px;
     }
-
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #64748b; padding-bottom: 8px; }
-    .order-no { font-size: 1.6rem; font-weight: 800; color: #f97316; }
-    .order-time { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
-    .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; }
-    .badge-pending { background-color: #f59e0b; color: white; }
-    .badge-completed { background-color: #64748b; color: white; }
-    
-    .customer-info { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 10px; }
-    .items-box { background-color: #1e293b; padding: 10px; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; color: #f1f5f9; margin-bottom: 10px; white-space: pre-wrap; font-weight: 500; }
-    .remark-box { background-color: #7f1d1d; color: #fca5a5; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 12px; font-weight: bold; }
-
-    .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-    .btn { padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 4px; transition: 0.15s; }
-    .btn:active { transform: scale(0.98); }
-    .btn-print-sys { background-color: #0284c7; color: white; }
-    .btn-finish { background-color: #22c55e; color: white; font-size: 0.9rem; }
-    
-    /* 系統列印區域樣式 (適用熱感應紙) */
-    #print-area { display: none; }
-    @media print {
-      body * { visibility: hidden; }
-      #print-area, #print-area * { visibility: visible; }
-      #print-area { display: block; position: absolute; left: 0; top: 0; width: 100%; color: black; background: white; font-size: 14px; }
-      .ticket { width: 220px; padding: 5px; font-family: monospace; }
-      .ticket-title { font-size: 18px; font-weight: bold; text-align: center; }
-      .ticket-divider { border-top: 1px dashed black; margin: 6px 0; }
-      .ticket-no { font-size: 28px; font-weight: bold; text-align: center; margin: 5px 0; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #2d2d2d;
+      padding: 15px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
     }
+    .header h1 { margin: 0; font-size: 24px; color: #f39c12; }
+    .status-tag { font-size: 14px; color: #a0a0a0; }
+    .refresh-btn {
+      background: #27ae60;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+    }
+    .order-card {
+      background: #2b2b2b;
+      border: 2px solid #444;
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #3d3d3d;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+    .order-no { font-size: 26px; font-weight: bold; color: #f1c40f; }
+    .order-time { font-size: 14px; color: #bbb; }
+    .order-cust { font-size: 15px; color: #ddd; margin-bottom: 8px; font-weight: bold; }
+    .order-items {
+      font-size: 16px;
+      line-height: 1.5;
+      white-space: pre-line;
+      background: #222;
+      padding: 10px;
+      border-radius: 8px;
+      color: #fff;
+      margin-bottom: 10px;
+      flex-grow: 1;
+    }
+    .order-remark {
+      background: #c0392b;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    .btn-finish {
+      width: 100%;
+      background: #27ae60;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-finish:active { background: #1e8449; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>🍗 阿力香雞排 - 廚房接單看板</h1>
-    <div class="status-bar">
-      <button id="auto-print-btn" class="status-btn bg-blue" onclick="toggleAutoPrint()">🖨️ 自動列印：開啟</button>
-      <button id="voice-btn" class="status-btn bg-purple" onclick="toggleVoice()">🔊 語音監控中</button>
-      <button id="shop-btn" class="status-btn bg-green" onclick="toggleShopStatus()">營業中</button>
-    </div>
-  </header>
-
-  <div id="orders-container" class="orders-grid">
-    <p style="color: #94a3b8; font-size: 1.1rem;">正在載入即時訂單...</p>
+<div class="header">
+  <h1>🍳 阿力香雞排 - 廚房出餐看板</h1>
+  <div>
+    <span class="status-tag" id="lastUpdated">載入中...</span>
+    <button class="refresh-btn" onclick="fetchOrders()">🔄 手動重新整理</button>
   </div>
+</div>
 
-  <!-- 系統列印專用區域 -->
-  <div id="print-area"></div>
+<div class="grid-container" id="ordersGrid">
+  <div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 50px; font-size: 18px;">
+    正在讀取未完成訂單...
+  </div>
+</div>
 
-  <script>
-    // 已更新為最新的 GAS Web App 網址
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec"; 
+<script>
+  // 已帶入您最新部署的網址
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
 
-    let voiceEnabled = true;
-    let autoPrintEnabled = true; // 是否開啟自動列印
-    let knownOrders = new Set();
-    let currentShopStatus = "正常";
-    let isFetching = false;
-    let isFirstLoad = true; // 第一次開啟不重複列印舊訂單
+  function fetchOrders() {
+    document.getElementById('lastUpdated').innerText = '資料更新中...';
+    
+    fetch(GAS_WEB_APP_URL + "?action=getKitchenData")
+      .then(res => res.json())
+      .then(data => {
+        const now = new Date();
+        document.getElementById('lastUpdated').innerText = '最後更新：' + now.toLocaleTimeString();
 
-    window.onload = () => {
-      fetchOrders();
-      setInterval(fetchOrders, 5000); // 每 5 秒檢查一次新訂單
-    };
-
-    async function fetchOrders() {
-      if (isFetching) return;
-      isFetching = true;
-
-      try {
-        const res = await fetch(`${GAS_API_URL}?action=getLiveOrders`);
-        const data = await res.json();
-        
-        currentShopStatus = data.status || "正常";
-        updateShopBtnUI();
-
-        if (data.orders) {
+        if (data.success && data.orders) {
           renderOrders(data.orders);
+        } else {
+          document.getElementById('ordersGrid').innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#e74c3c;">讀取訂單失敗</div>';
         }
-      } catch (err) {
-        console.error("抓取訂單失敗：", err);
-      } finally {
-        isFetching = false;
-      }
-    }
-
-    function renderOrders(orders) {
-      const container = document.getElementById("orders-container");
-      if (!orders || orders.length === 0) {
-        container.innerHTML = '<p style="color: #94a3b8; font-size: 1.1rem;">目前尚無訂單</p>';
-        isFirstLoad = false;
-        return;
-      }
-
-      let newOrdersToPrint = [];
-      let html = "";
-
-      orders.forEach(ord => {
-        const isPending = ord.status === "待處理";
-        const orderKey = `${ord.orderNo}_${ord.time}`;
-
-        // 判斷是否為剛進來的新訂單
-        if (isPending && !knownOrders.has(orderKey)) {
-          knownOrders.add(orderKey);
-          if (!isFirstLoad) {
-            newOrdersToPrint.push(ord);
-          }
-        }
-
-        html += `
-          <div class="order-card ${isPending ? 'pending' : ''}">
-            <div>
-              <div class="card-header">
-                <div>
-                  <div class="order-no">取單號：#${ord.orderNo}</div>
-                  <div class="order-time">⏰ ${ord.time}</div>
-                </div>
-                <span class="badge ${isPending ? 'badge-pending' : 'badge-completed'}">${ord.status}</span>
-              </div>
-              <div class="customer-info">👤 ${ord.name} (${ord.phone})</div>
-              <div class="items-box">${ord.itemsDetail}</div>
-              ${ord.remark ? `<div class="remark-box">📌 備註：${ord.remark}</div>` : ''}
-            </div>
-            <div>
-              <div style="font-weight:bold; font-size: 1.1rem; text-align:right; color:#22c55e; margin-bottom:8px;">$${ord.totalPrice}</div>
-              <div class="btn-group">
-                <button class="btn btn-print-sys" onclick="printSys('${ord.orderNo}', '${ord.time}', '${ord.name}', '${ord.phone}', \`${ord.itemsDetail}\`, '${ord.remark}', '${ord.totalPrice}')">💻 手動列印</button>
-                ${isPending ? `<button class="btn btn-finish" onclick="completeOrder('${ord.orderNo}')">✅ 完成 (出餐)</button>` : '<button class="btn" style="visibility:hidden"></button>'}
-              </div>
-            </div>
-          </div>
-        `;
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('lastUpdated').innerText = '更新失敗';
       });
+  }
 
-      container.innerHTML = html;
-
-      // 偵測到新訂單進來
-      if (newOrdersToPrint.length > 0) {
-        if (voiceEnabled) playAlertSound();
-
-        // 觸發系統自動列印
-        if (autoPrintEnabled) {
-          newOrdersToPrint.forEach(ord => {
-            printSys(ord.orderNo, ord.time, ord.name, ord.phone, ord.itemsDetail, ord.remark, ord.totalPrice);
-          });
-        }
-      }
-
-      isFirstLoad = false;
+  function renderOrders(orders) {
+    const grid = document.getElementById('ordersGrid');
+    if (orders.length === 0) {
+      grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#888; padding:50px; font-size:20px;">🎉 目前沒有待製作的單，休息一下吧！</div>';
+      return;
     }
 
-    // 系統列印功能
-    function printSys(no, time, name, phone, items, remark, price) {
-      const printArea = document.getElementById("print-area");
-      printArea.innerHTML = `
-        <div class="ticket">
-          <div class="ticket-title">阿力香雞排</div>
-          <div class="ticket-no">#${no}</div>
-          <div>時間：${time}</div>
-          <div>顧客：${name} (${phone})</div>
-          <div class="ticket-divider"></div>
-          <div style="white-space: pre-wrap; font-size:14px; font-weight:bold;">${items}</div>
-          <div class="ticket-divider"></div>
-          ${remark ? `<div><b>備註：</b>${remark}</div><div class="ticket-divider"></div>` : ''}
-          <div style="font-size:15px; font-weight:bold; text-align:right;">總金額：$${price}</div>
+    let html = '';
+    orders.forEach(order => {
+      html += `
+        <div class="order-card">
+          <div>
+            <div class="order-header">
+              <span class="order-no">#${order.orderNo}</span>
+              <span class="order-time">🕒 ${order.time}</span>
+            </div>
+            <div class="order-cust">👤 ${order.name} (${order.phone})</div>
+            ${order.remark ? `<div class="order-remark">📝 備註：${order.remark}</div>` : ''}
+            <div class="order-items">${order.itemsDetail}</div>
+          </div>
+          <button class="btn-finish" onclick="completeOrder(${order.rowIndex}, this)">✅ 出餐完成</button>
         </div>
       `;
-      window.print();
-    }
+    });
+    grid.innerHTML = html;
+  }
 
-    // 更新訂單為已完成
-    async function completeOrder(orderNo) {
-      try {
-        await fetch(`${GAS_API_URL}?action=updateOrderStatus&orderNo=${orderNo}&status=已完成`);
-        fetchOrders();
-      } catch (err) {
-        alert("更新失敗！");
-      }
-    }
+  function completeOrder(rowIndex, btnEl) {
+    if (!confirm('確定此單已製作完成並出餐？')) return;
+    
+    btnEl.disabled = true;
+    btnEl.innerText = '處理中...';
 
-    // 開關自動列印
-    function toggleAutoPrint() {
-      autoPrintEnabled = !autoPrintEnabled;
-      const btn = document.getElementById("auto-print-btn");
-      if (autoPrintEnabled) {
-        btn.className = "status-btn bg-blue";
-        btn.innerText = "🖨️ 自動列印：開啟";
+    fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'updateOrderStatus',
+        rowIndex: rowIndex,
+        status: '已完成'
+      })
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        fetchOrders(); // 重新整理
       } else {
-        btn.className = "status-btn bg-gray";
-        btn.innerText = "🖨️ 自動列印：關閉";
+        alert('修改狀態失敗：' + res.error);
+        btnEl.disabled = false;
+        btnEl.innerText = '✅ 出餐完成';
       }
-    }
+    })
+    .catch(err => {
+      alert('連線失敗，請重試');
+      btnEl.disabled = false;
+      btnEl.innerText = '✅ 出餐完成';
+    });
+  }
 
-    // 切換店家營業狀態
-    async function toggleShopStatus() {
-      const nextStatus = (currentShopStatus === "正常") ? "暫停營業" : "正常";
-      if (!confirm(`確定要將店家狀態改為【${nextStatus}】嗎？`)) return;
+  // 初次載入
+  fetchOrders();
 
-      try {
-        await fetch(`${GAS_API_URL}?action=toggleStatus&status=${encodeURIComponent(nextStatus)}`);
-        currentShopStatus = nextStatus;
-        updateShopBtnUI();
-      } catch (err) {
-        alert("切換狀態失敗！");
-      }
-    }
+  // 每 15 秒自動輪詢更新一次
+  setInterval(fetchOrders, 15000);
+</script>
 
-    function updateShopBtnUI() {
-      const btn = document.getElementById("shop-btn");
-      if (currentShopStatus === "正常") {
-        btn.className = "status-btn bg-green";
-        btn.innerText = "營業中";
-      } else {
-        btn.className = "status-btn bg-red";
-        btn.innerText = "暫停營業中";
-      }
-    }
-
-    // 語音提示
-    function playAlertSound() {
-      const msg = new SpeechSynthesisUtterance("新訂單來囉！");
-      msg.lang = "zh-TW";
-      window.speechSynthesis.speak(msg);
-    }
-
-    function toggleVoice() {
-      voiceEnabled = !voiceEnabled;
-      const btn = document.getElementById("voice-btn");
-      if (voiceEnabled) {
-        btn.className = "status-btn bg-purple";
-        btn.innerText = "🔊 語音監控中";
-      } else {
-        btn.className = "status-btn bg-red";
-        btn.innerText = "🔇 語音已靜音";
-      }
-    }
-  </script>
 </body>
 </html>
