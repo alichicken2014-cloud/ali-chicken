@@ -248,7 +248,8 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAH-sbYJlto49H8_C0QFSDCDZ3dfCBLdMO3TSpGYHMzdOdtVrVOtSuSbh3VDw7yIGz/exec";
+  // ⚠️ 已自動幫您對接上最新發布的 GAS 網址
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwmW6zrV40Qsyz5fBVqELlZBG48hwvt2mvZNWQd0mITEh2fcgaaDzd9ZsjqgshAzxbVwg/exec";
   const MY_LIFF_ID = "2011276802-mdrsLFND";
   const MY_LIFF_URL = "https://liff.line.me/" + MY_LIFF_ID;
 
@@ -263,7 +264,6 @@
   window.onload = function() {
     if (typeof liff !== 'undefined' && MY_LIFF_ID) {
       liff.init({ liffId: MY_LIFF_ID }).then(() => {
-        // 強制檢查是否在 LINE 內開啟，若外部瀏覽器點擊則警告並導回 LIFF
         if (!liff.isInClient()) {
           alert('⚠️ 請從【阿力香雞排 官方LINE】點選連結進行點餐，才能順利接收訂單確認訊息喔！');
           window.location.href = MY_LIFF_URL;
@@ -288,8 +288,8 @@
     fetch(GAS_WEB_APP_URL)
       .then(res => res.json())
       .then(resData => {
-        if (!resData.isOpen) {
-          alert(resData.closeReason);
+        if (resData.status && resData.status !== "正常") {
+          alert("店面目前暫停營業中！");
           const submitBtn = document.querySelector('.btn-submit');
           if (submitBtn) {
             submitBtn.disabled = true;
@@ -298,11 +298,11 @@
           }
           document.getElementById('gridMenu').innerHTML = `
             <div style="grid-column: span 2; text-align: center; padding: 40px 10px; color: #e74c3c; font-weight: bold; font-size: 18px; line-height: 1.6;">
-              ${resData.closeReason.replace(/\n/g, '<br>')}
+              店家目前休息/暫停營業中<br>請稍後再試！
             </div>
           `;
         } else {
-          processMenu(resData.menu || resData);
+          processMenu(resData.menu || resData.orders || resData);
         }
       })
       .catch(err => {
@@ -324,8 +324,10 @@
     groupedMenu = {};
     categories = ['全部'];
 
+    if (!Array.isArray(data)) return;
+
     data.forEach(item => {
-      let cat = item.category;
+      let cat = item.category || "熱門餐點";
       if (!categories.includes(cat)) categories.push(cat);
 
       if (!groupedMenu[item.name]) {
@@ -358,7 +360,7 @@
       const itemGroup = groupedMenu[name];
       if (currentCategory !== '全部' && itemGroup.category !== currentCategory) continue;
 
-      const minPrice = Math.min(...itemGroup.portions.map(p => p.price));
+      const minPrice = Math.min(...itemGroup.portions.map(p => p.price || 0));
       const count = cart.filter(c => c.name === name).reduce((sum, c) => sum + c.qty, 0);
 
       html += `
@@ -381,7 +383,7 @@
     const portions = groupedMenu[name].portions;
     let portionHtml = '';
     portions.forEach((p, idx) => {
-      portionHtml += `<span class="btn-grid-select ${idx === 0 ? 'selected' : ''}" data-price="${p.price}" data-portion="${p.portion}" onclick="selectBtnGroup(this, 'portion')">${p.portion} ($${p.price})</span>`;
+      portionHtml += `<span class="btn-grid-select ${idx === 0 ? 'selected' : ''}" data-price="${p.price || 0}" data-portion="${p.portion || '標準'}" onclick="selectBtnGroup(this, 'portion')">${p.portion || '標準'} ($${p.price || 0})</span>`;
     });
     document.getElementById('portionOptions').innerHTML = portionHtml;
     
@@ -535,14 +537,14 @@
     .then(res => res.json())
     .then(res => {
       if (res.success) {
-        alert(`🎉 下單成功！您的取單號為 ${res.orderNo}`);
+        alert(`🎉 下單成功！您的取單號為 #${res.orderNo}`);
         if (typeof liff !== 'undefined' && liff.isInClient()) {
           liff.closeWindow();
         } else {
           location.reload();
         }
       } else {
-        alert('下單失敗：' + res.error);
+        alert('下單失敗：' + (res.error || '未知錯誤'));
         submitBtn.disabled = false;
         submitBtn.innerText = '💛 確認送出訂單 💛';
       }
