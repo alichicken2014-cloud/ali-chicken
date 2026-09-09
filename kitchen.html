@@ -10,88 +10,57 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: #1e1e1e;
       color: #fff;
-      margin: 0;
-      padding: 15px;
+      margin: 0; padding: 15px;
     }
     .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #2d2d2d;
-      padding: 15px 20px;
-      border-radius: 12px;
-      margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: #2d2d2d; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px;
     }
     .header h1 { margin: 0; font-size: 24px; color: #f39c12; }
     .status-tag { font-size: 14px; color: #a0a0a0; }
     .refresh-btn {
-      background: #27ae60;
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 16px;
+      background: #27ae60; color: white; border: none; padding: 10px 18px;
+      border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;
     }
     .grid-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 15px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;
     }
     .order-card {
-      background: #2b2b2b;
-      border: 2px solid #444;
-      border-radius: 12px;
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      background: #2b2b2b; border: 2px solid #444; border-radius: 12px; padding: 15px;
+      display: flex; flex-direction: column; justify-content: space-between;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
     .order-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid #3d3d3d;
-      padding-bottom: 10px;
-      margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 2px solid #3d3d3d; padding-bottom: 10px; margin-bottom: 10px;
     }
-    .order-no { font-size: 26px; font-weight: bold; color: #f1c40f; }
+    .order-no { font-size: 28px; font-weight: bold; color: #f1c40f; }
     .order-time { font-size: 14px; color: #bbb; }
     .order-cust { font-size: 15px; color: #ddd; margin-bottom: 8px; font-weight: bold; }
     .order-items {
-      font-size: 16px;
-      line-height: 1.5;
-      white-space: pre-line;
-      background: #222;
-      padding: 10px;
-      border-radius: 8px;
-      color: #fff;
-      margin-bottom: 10px;
-      flex-grow: 1;
+      font-size: 16px; line-height: 1.5; white-space: pre-line; background: #222;
+      padding: 10px; border-radius: 8px; color: #fff; margin-bottom: 10px; flex-grow: 1;
     }
     .order-remark {
-      background: #c0392b;
-      color: white;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 14px;
-      margin-bottom: 10px;
-      font-weight: bold;
+      background: #c0392b; color: white; padding: 6px 10px; border-radius: 6px;
+      font-size: 14px; margin-bottom: 10px; font-weight: bold;
+    }
+    .btn-group { display: flex; gap: 8px; }
+    .btn-print {
+      background: #3498db; color: white; border: none; padding: 10px;
+      border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1;
     }
     .btn-finish {
-      width: 100%;
-      background: #27ae60;
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
+      background: #27ae60; color: white; border: none; padding: 10px;
+      border-radius: 8px; font-weight: bold; cursor: pointer; flex: 2; font-size: 16px;
     }
-    .btn-finish:active { background: #1e8449; }
+
+    /* 列印專用隱藏樣式 */
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
+    }
   </style>
 </head>
 <body>
@@ -100,22 +69,28 @@
   <h1>🍳 阿力香雞排 - 廚房出餐看板</h1>
   <div>
     <span class="status-tag" id="lastUpdated">載入中...</span>
-    <button class="refresh-btn" onclick="fetchOrders()">🔄 手動重新整理</button>
+    <button class="refresh-btn" onclick="fetchOrders()">🔄 重新整理</button>
   </div>
 </div>
 
 <div class="grid-container" id="ordersGrid">
-  <div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 50px; font-size: 18px;">
-    正在讀取未完成訂單...
-  </div>
+  <div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 50px;">正在讀取訂單...</div>
 </div>
 
+<!-- 隱藏的音效說明提示與音效 -->
+<audio id="audioNotice" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+<!-- 列印區 -->
+<div id="printArea" style="display:none; padding:10px; font-family: monospace;"></div>
+
 <script>
-  // 已帶入您最新部署的網址
+  // ⚠️ 請記得貼上您「最新部署」的 GAS 網址
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
 
+  let lastOrderCount = -1;
+
   function fetchOrders() {
-    document.getElementById('lastUpdated').innerText = '資料更新中...';
+    document.getElementById('lastUpdated').innerText = '更新中...';
     
     fetch(GAS_WEB_APP_URL + "?action=getKitchenData")
       .then(res => res.json())
@@ -124,9 +99,13 @@
         document.getElementById('lastUpdated').innerText = '最後更新：' + now.toLocaleTimeString();
 
         if (data.success && data.orders) {
+          // 聲音提醒：如果新單數量比上一次多，播放提示音
+          if (lastOrderCount !== -1 && data.orders.length > lastOrderCount) {
+            playAlertSound();
+          }
+          lastOrderCount = data.orders.length;
+
           renderOrders(data.orders);
-        } else {
-          document.getElementById('ordersGrid').innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#e74c3c;">讀取訂單失敗</div>';
         }
       })
       .catch(err => {
@@ -135,15 +114,25 @@
       });
   }
 
+  function playAlertSound() {
+    const audio = document.getElementById('audioNotice');
+    if (audio) {
+      audio.play().catch(e => console.log('瀏覽器阻擋自動播放音效，請先在頁面任意點擊一下'));
+    }
+  }
+
   function renderOrders(orders) {
     const grid = document.getElementById('ordersGrid');
     if (orders.length === 0) {
-      grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#888; padding:50px; font-size:20px;">🎉 目前沒有待製作的單，休息一下吧！</div>';
+      grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#888; padding:50px; font-size:20px;">🎉 目前沒有待製作訂單</div>';
       return;
     }
 
     let html = '';
     orders.forEach(order => {
+      // 避開轉義字元問題，將訂單轉換為 JSON 字串
+      const orderJson = JSON.stringify(order).replace(/'/g, "&apos;");
+
       html += `
         <div class="order-card">
           <div>
@@ -155,16 +144,37 @@
             ${order.remark ? `<div class="order-remark">📝 備註：${order.remark}</div>` : ''}
             <div class="order-items">${order.itemsDetail}</div>
           </div>
-          <button class="btn-finish" onclick="completeOrder(${order.rowIndex}, this)">✅ 出餐完成</button>
+          <div class="btn-group">
+            <button class="btn-print" onclick='printReceipt(${orderJson})'>🖨️ 列印</button>
+            <button class="btn-finish" onclick="completeOrder(${order.rowIndex}, this)">✅ 完成</button>
+          </div>
         </div>
       `;
     });
     grid.innerHTML = html;
   }
 
+  // 手動列印單據
+  function printReceipt(order) {
+    const printArea = document.getElementById('printArea');
+    printArea.innerHTML = `
+      <div style="text-align:center; font-size:18px; font-weight:bold;">阿力香雞排 崑山店</div>
+      <div style="text-align:center; font-size:22px; font-weight:bold; margin: 5px 0;">單號：#${order.orderNo}</div>
+      <hr>
+      <div>時間：${order.time}</div>
+      <div>顧客：${order.name} (${order.phone})</div>
+      ${order.remark ? `<div>備註：${order.remark}</div>` : ''}
+      <hr>
+      <div style="font-size:16px; white-space:pre-line;">${order.itemsDetail}</div>
+      <hr>
+      <div style="font-size:18px; font-weight:bold; text-align:right;">合計：$${order.totalPrice}</div>
+    `;
+    printArea.style.display = 'block';
+    window.print();
+    printArea.style.display = 'none';
+  }
+
   function completeOrder(rowIndex, btnEl) {
-    if (!confirm('確定此單已製作完成並出餐？')) return;
-    
     btnEl.disabled = true;
     btnEl.innerText = '處理中...';
 
@@ -180,25 +190,24 @@
     .then(res => res.json())
     .then(res => {
       if (res.success) {
-        fetchOrders(); // 重新整理
+        fetchOrders();
       } else {
-        alert('修改狀態失敗：' + res.error);
+        alert('失敗：' + res.error);
         btnEl.disabled = false;
-        btnEl.innerText = '✅ 出餐完成';
+        btnEl.innerText = '✅ 完成';
       }
-    })
-    .catch(err => {
-      alert('連線失敗，請重試');
-      btnEl.disabled = false;
-      btnEl.innerText = '✅ 出餐完成';
     });
   }
 
-  // 初次載入
+  // 初始化並每 10 秒自動輪詢
   fetchOrders();
+  setInterval(fetchOrders, 10000);
 
-  // 每 15 秒自動輪詢更新一次
-  setInterval(fetchOrders, 15000);
+  // 點擊頁面解鎖聲音播放限制
+  document.body.addEventListener('click', () => {
+    const audio = document.getElementById('audioNotice');
+    if (audio) { audio.load(); }
+  }, { once: true });
 </script>
 
 </body>
