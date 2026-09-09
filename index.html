@@ -248,7 +248,6 @@
 </div>
 
 <script>
-  // ⚠️ 已自動幫您對接上最新發布的 GAS 網址
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwmW6zrV40Qsyz5fBVqELlZBG48hwvt2mvZNWQd0mITEh2fcgaaDzd9ZsjqgshAzxbVwg/exec";
   const MY_LIFF_ID = "2011276802-mdrsLFND";
   const MY_LIFF_URL = "https://liff.line.me/" + MY_LIFF_ID;
@@ -288,8 +287,10 @@
     fetch(GAS_WEB_APP_URL)
       .then(res => res.json())
       .then(resData => {
-        if (resData.status && resData.status !== "正常") {
-          alert("店面目前暫停營業中！");
+        // 1. 檢查營業狀態
+        if (resData.isOpen === false || (resData.status && resData.status !== "正常")) {
+          const reason = resData.closeReason || "店家目前休息/暫停營業中，請稍後再試！";
+          alert(reason);
           const submitBtn = document.querySelector('.btn-submit');
           if (submitBtn) {
             submitBtn.disabled = true;
@@ -298,11 +299,22 @@
           }
           document.getElementById('gridMenu').innerHTML = `
             <div style="grid-column: span 2; text-align: center; padding: 40px 10px; color: #e74c3c; font-weight: bold; font-size: 18px; line-height: 1.6;">
-              店家目前休息/暫停營業中<br>請稍後再試！
+              ${reason.replace(/\n/g, '<br>')}
             </div>
           `;
+          return;
+        }
+
+        // 2. 精準讀取菜單資料（避免讀到 orders）
+        let rawMenu = resData.menu;
+        if (!rawMenu && Array.isArray(resData)) {
+          rawMenu = resData;
+        }
+
+        if (rawMenu && Array.isArray(rawMenu) && rawMenu.length > 0) {
+          processMenu(rawMenu);
         } else {
-          processMenu(resData.menu || resData.orders || resData);
+          document.getElementById('gridMenu').innerHTML = '<div style="grid-column: span 2; text-align:center; color:#999; padding:20px;">目前尚無菜單資料</div>';
         }
       })
       .catch(err => {
@@ -324,10 +336,8 @@
     groupedMenu = {};
     categories = ['全部'];
 
-    if (!Array.isArray(data)) return;
-
     data.forEach(item => {
-      let cat = item.category || "熱門餐點";
+      let cat = item.category || '熱門餐點';
       if (!categories.includes(cat)) categories.push(cat);
 
       if (!groupedMenu[item.name]) {
@@ -360,7 +370,7 @@
       const itemGroup = groupedMenu[name];
       if (currentCategory !== '全部' && itemGroup.category !== currentCategory) continue;
 
-      const minPrice = Math.min(...itemGroup.portions.map(p => p.price || 0));
+      const minPrice = Math.min(...itemGroup.portions.map(p => Number(p.price) || 0));
       const count = cart.filter(c => c.name === name).reduce((sum, c) => sum + c.qty, 0);
 
       html += `
