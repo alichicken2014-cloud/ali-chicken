@@ -60,7 +60,7 @@
     .btn-print { background: #2980b9; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; }
     .btn-finish { background: #27ae60; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 2; font-size: 17px; }
 
-    /* 🌟 強制固定 58mm 熱感應紙的最佳寬度與清晰大字 */
+    /* 🌟 對齊下午 16:55 的乾淨比例列印設定 */
     @media print {
       body * { display: none !important; }
       #printArea, #printArea * { display: block !important; visibility: visible !important; }
@@ -68,10 +68,10 @@
         position: absolute !important;
         left: 0 !important;
         top: 0 !important;
-        width: 380px !important; /* 限制寬度避免 RawBT 等比例微雕縮小 */
+        width: 380px !important;
         color: #000000 !important;
         background: #ffffff !important;
-        font-family: "Microsoft JhengHei", "PingFang TC", Arial, sans-serif !important;
+        font-family: sans-serif !important;
         padding: 0 !important;
         margin: 0 !important;
         -webkit-print-color-adjust: exact;
@@ -101,7 +101,7 @@
 <div id="printArea"></div>
 
 <script>
-  // ⚠️ 請填入您最新部署的 GAS 網址
+  // ⚠️ 請確認為您最新的 GAS 部署網址
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
 
   let knownOrderNos = new Set();
@@ -220,26 +220,26 @@
     grid.innerHTML = html;
   }
 
-  // 🌟 列印函數：限制 380px + 字體超大超粗，讓 RawBT 完美印出
+  // 🌟 還原下午 16:55 的字體比例：清晰不加粗、字體自然放大
   function printReceipt(order) {
     const printArea = document.getElementById('printArea');
     printArea.innerHTML = `
-      <div style="width: 380px; padding: 5px; color: #000; font-family: 'Microsoft JhengHei', sans-serif;">
-        <div style="text-align:center; font-size: 26px; font-weight: 900; letter-spacing: 1px;">阿力香雞排</div>
-        <div style="text-align:center; font-size: 48px; font-weight: 900; margin: 2px 0; line-height: 1;">#${order.orderNo}</div>
+      <div style="width: 380px; padding: 5px; color: #000; font-family: sans-serif;">
+        <div style="text-align:center; font-size: 28px; font-weight: bold;">阿力香雞排</div>
+        <div style="text-align:center; font-size: 52px; font-weight: bold; margin: 4px 0; line-height: 1;">#${order.orderNo}</div>
         
-        <div style="font-size: 16px; margin-top: 6px;">下單時間：${order.time}</div>
-        <div style="font-size: 18px; font-weight: bold;">顧客：${order.name} (${order.phone})</div>
+        <div style="font-size: 18px; margin-top: 8px;">下單時間：${order.time}</div>
+        <div style="font-size: 20px;">顧客：${order.name} (${order.phone})</div>
         
-        <div style="border-bottom: 2px dashed #000; margin: 8px 0;"></div>
+        <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
         
-        ${order.remark ? `<div style="font-size: 20px; font-weight: 900;">備註：${order.remark}</div><div style="border-bottom: 2px dashed #000; margin: 8px 0;"></div>` : ''}
+        ${order.remark ? `<div style="font-size: 22px; font-weight: bold;">備註：${order.remark}</div><div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>` : ''}
         
-        <div style="font-size: 22px; font-weight: 900; line-height: 1.5; white-space: pre-line; word-break: break-all;">${order.itemsDetail}</div>
+        <div style="font-size: 25px; line-height: 1.4; white-space: pre-line; word-break: break-all;">${order.itemsDetail}</div>
         
-        <div style="border-bottom: 2px dashed #000; margin: 8px 0;"></div>
+        <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
         
-        <div style="font-size: 24px; font-weight: 900; text-align: right;">總金額：$${order.totalPrice}</div>
+        <div style="font-size: 28px; font-weight: bold; text-align: right;">總金額：$${order.totalPrice}</div>
         <div style="height: 30px;"></div>
       </div>
     `;
