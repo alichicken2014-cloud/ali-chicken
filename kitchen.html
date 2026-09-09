@@ -60,7 +60,7 @@
     .btn-print { background: #2980b9; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; }
     .btn-finish { background: #27ae60; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 2; font-size: 17px; }
 
-    /* 🌟 對齊下午 16:55 的乾淨比例列印設定 */
+    /* 🌟 細明體大字列印設定 */
     @media print {
       body * { display: none !important; }
       #printArea, #printArea * { display: block !important; visibility: visible !important; }
@@ -71,7 +71,7 @@
         width: 380px !important;
         color: #000000 !important;
         background: #ffffff !important;
-        font-family: sans-serif !important;
+        font-family: "PMingLiU", "MingLiU", "新細明體", "細明體", serif !important;
         padding: 0 !important;
         margin: 0 !important;
         -webkit-print-color-adjust: exact;
@@ -220,22 +220,26 @@
     grid.innerHTML = html;
   }
 
-  // 🌟 還原下午 16:55 的字體比例：清晰不加粗、字體自然放大
+  // 🌟 列印函數：指定細明體 (PMingLiU)、放大時間與顧客資訊
   function printReceipt(order) {
     const printArea = document.getElementById('printArea');
+    
+    // 確保時間顯示包含完整的日期與時間
+    const fullTime = order.fullTime || order.time;
+
     printArea.innerHTML = `
-      <div style="width: 380px; padding: 5px; color: #000; font-family: sans-serif;">
-        <div style="text-align:center; font-size: 28px; font-weight: bold;">阿力香雞排</div>
-        <div style="text-align:center; font-size: 52px; font-weight: bold; margin: 4px 0; line-height: 1;">#${order.orderNo}</div>
+      <div style="width: 380px; padding: 5px; color: #000; font-family: 'PMingLiU', 'MingLiU', '新細明體', serif;">
+        <div style="text-align:center; font-size: 30px; font-weight: bold;">阿力香雞排</div>
+        <div style="text-align:center; font-size: 54px; font-weight: bold; margin: 4px 0; line-height: 1;">#${order.orderNo}</div>
         
-        <div style="font-size: 18px; margin-top: 8px;">下單時間：${order.time}</div>
-        <div style="font-size: 20px;">顧客：${order.name} (${order.phone})</div>
+        <div style="font-size: 22px; margin-top: 10px; line-height: 1.3;">下單時間：${fullTime}</div>
+        <div style="font-size: 22px; margin-top: 4px; line-height: 1.3;">顧客：${order.name} (${order.phone})</div>
         
         <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
         
-        ${order.remark ? `<div style="font-size: 22px; font-weight: bold;">備註：${order.remark}</div><div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>` : ''}
+        ${order.remark ? `<div style="font-size: 24px; font-weight: bold;">備註：${order.remark}</div><div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>` : ''}
         
-        <div style="font-size: 25px; line-height: 1.4; white-space: pre-line; word-break: break-all;">${order.itemsDetail}</div>
+        <div style="font-size: 26px; line-height: 1.4; white-space: pre-line; word-break: break-all;">${order.itemsDetail}</div>
         
         <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
         
