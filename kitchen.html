@@ -15,21 +15,16 @@
     .header {
       display: flex; justify-content: space-between; align-items: center;
       background: #1e1e1e; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
     .header h1 { margin: 0; font-size: 24px; color: #f39c12; }
     .status-info { display: flex; align-items: center; gap: 12px; }
     
-    /* 營業狀態控制按鈕 */
     .btn-toggle-store {
       border: none; padding: 10px 16px; border-radius: 8px; font-size: 16px;
       font-weight: bold; cursor: pointer; color: white; transition: 0.2s;
     }
     .btn-open { background: #27ae60; }
-    .btn-open:hover { background: #219150; }
     .btn-close { background: #e74c3c; }
-    .btn-close:hover { background: #c0392b; }
-
     .refresh-btn {
       background: #34495e; color: white; border: none; padding: 10px 14px;
       border-radius: 8px; font-size: 15px; cursor: pointer;
@@ -41,7 +36,6 @@
     .order-card {
       background: #242424; border: 2px solid #3d3d3d; border-radius: 12px; padding: 15px;
       display: flex; flex-direction: column; justify-content: space-between;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
     .order-header {
       display: flex; justify-content: space-between; align-items: center;
@@ -60,10 +54,21 @@
     .btn-print { background: #2980b9; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; }
     .btn-finish { background: #27ae60; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 2; font-size: 17px; }
 
+    /* 🌟 下午能成功列印的核心：簡單直接的 Print CSS */
     @media print {
-      body * { visibility: hidden; }
-      #printArea, #printArea * { visibility: visible; }
-      #printArea { position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; padding: 5px; font-family: monospace; }
+      body * { display: none !important; }
+      #printArea, #printArea * { display: block !important; visibility: visible !important; }
+      #printArea {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        color: #000000 !important;
+        background: #ffffff !important;
+        font-family: sans-serif !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
     }
   </style>
 </head>
@@ -72,7 +77,6 @@
 <div class="header">
   <h1>🍳 阿力香雞排 - 廚房看板</h1>
   <div class="status-info">
-    <!-- 切換營業狀態按鈕 -->
     <button id="toggleStoreBtn" class="btn-toggle-store btn-open" onclick="toggleStoreStatus()">🟢 營業中 (點擊公休)</button>
     <button class="refresh-btn" onclick="fetchOrders()">🔄 重新整理</button>
   </div>
@@ -85,10 +89,12 @@
 </div>
 
 <audio id="audioNotice" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
-<div id="printArea" style="display:none;"></div>
+
+<!-- 列印專用區塊 -->
+<div id="printArea"></div>
 
 <script>
-  // ⚠️ 請填入您最新部署的 GAS 網址
+  // ⚠️ 請填入您最新的 GAS 部署網址
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
 
   let knownOrderNos = new Set();
@@ -100,7 +106,6 @@
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          // 更新營業狀態按鈕顯示
           updateStoreBtn(data.isOpen);
 
           let hasNewOrder = false;
@@ -130,39 +135,25 @@
       .catch(err => console.error(err));
   }
 
-  // 切換營業狀態 (開啟 / 臨時公休)
   function toggleStoreStatus() {
     const targetState = !currentIsOpen;
     const actionText = targetState ? "開啟營業（允許顧客點餐）" : "臨時公休（暫停顧客點餐）";
-    
     if (!confirm(`確定要切換為【${actionText}】嗎？`)) return;
 
     const btn = document.getElementById('toggleStoreBtn');
     btn.disabled = true;
-    btn.innerText = "處理中...";
 
     fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'toggleStoreStatus',
-        isOpen: targetState
-      })
+      body: JSON.stringify({ action: 'toggleStoreStatus', isOpen: targetState })
     })
     .then(res => res.json())
     .then(res => {
       btn.disabled = false;
-      if (res.success) {
-        updateStoreBtn(res.isOpen);
-        alert(`已切換狀態為：${res.isOpen ? '🟢 營業中' : '🔴 臨時公休'}`);
-      } else {
-        alert('切換失敗：' + res.error);
-      }
+      if (res.success) updateStoreBtn(res.isOpen);
     })
-    .catch(err => {
-      btn.disabled = false;
-      alert('連線失敗，請重試');
-    });
+    .catch(() => { btn.disabled = false; });
   }
 
   function updateStoreBtn(isOpen) {
@@ -213,48 +204,28 @@
     grid.innerHTML = html;
   }
 
+  // 🌟 還原下午下午四點多的原始 HTML 結構（ RawBT 絕對讀得出來）
   function printReceipt(order) {
-    let printArea = document.getElementById('printArea');
-    if (!printArea) {
-      printArea = document.createElement('div');
-      printArea.id = 'printArea';
-      document.body.appendChild(printArea);
-    }
-
-    // 建立純文字、無複雜 CSS 的列印內容，RawBT 才能抓到字
+    const printArea = document.getElementById('printArea');
     printArea.innerHTML = `
-      <div style="font-family: sans-serif; width: 100%; color: #000; background: #fff; padding: 5px;">
-        <div style="font-size: 22px; font-weight: bold; text-align: center;">阿力香雞排 崑山店</div>
-        <div style="font-size: 30px; font-weight: bold; text-align: center; margin: 5px 0;">#${order.orderNo}</div>
-        <hr style="border: none; border-top: 1px dashed #000; margin: 5px 0;">
-        <div style="font-size: 14px;">時間：${order.time}</div>
-        <div style="font-size: 14px;">顧客：${order.name} (${order.phone})</div>
-        ${order.remark ? `<div style="font-size: 15px; font-weight: bold; margin-top: 4px;">備註：${order.remark}</div>` : ''}
-        <hr style="border: none; border-top: 1px dashed #000; margin: 5px 0;">
-        <div style="font-size: 16px; font-weight: bold; line-height: 1.5; white-space: pre-line;">${order.itemsDetail}</div>
-        <hr style="border: none; border-top: 1px dashed #000; margin: 5px 0;">
-        <div style="font-size: 20px; font-weight: bold; text-align: right;">合計：$${order.totalPrice}</div>
-      </div>
+      <div style="text-align:center; font-size:20px; font-weight:bold;">阿力香雞排</div>
+      <div style="text-align:center; font-size:28px; font-weight:bold; margin: 4px 0;">#${order.orderNo}</div>
+      <div style="font-size:13px;">下單時間：${order.time}</div>
+      <div style="font-size:13px;">顧客：${order.name} (${order.phone})</div>
+      <div style="border-bottom:1px dashed #000; margin: 6px 0;"></div>
+      ${order.remark ? `<div style="font-size:15px; font-weight:bold;">備註：${order.remark}</div><div style="border-bottom:1px dashed #000; margin: 6px 0;"></div>` : ''}
+      <div style="font-size:16px; font-weight:bold; line-height:1.5; white-space:pre-line;">${order.itemsDetail}</div>
+      <div style="border-bottom:1px dashed #000; margin: 6px 0;"></div>
+      <div style="font-size:18px; font-weight:bold; text-align:right;">總金額：$${order.totalPrice}</div>
     `;
 
-    // 暫時隱藏畫面其他部分，確保印表機只抓得到單據
-    const mainContent = document.querySelectorAll('body > :not(#printArea)');
-    mainContent.forEach(el => el.style.display = 'none');
-    printArea.style.display = 'block';
-
+    // 觸發原生列印，讓 RawBT 擷取畫面
     window.print();
-
-    // 印完後恢復畫面顯示
-    setTimeout(() => {
-      printArea.style.display = 'none';
-      mainContent.forEach(el => el.style.display = '');
-    }, 500);
   }
 
   function completeOrder(rowIndex, btnEl) {
     if (!confirm('確定此單已製作完成？')) return;
     btnEl.disabled = true;
-    btnEl.innerText = '處理中...';
 
     fetch(GAS_WEB_APP_URL, {
       method: 'POST',
