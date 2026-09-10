@@ -33,7 +33,6 @@
 
     .container { padding: 15px; max-width: 600px; margin: 0 auto; }
 
-    /* 🔍 搜尋框樣式 */
     .search-box { margin-bottom: 12px; }
     .search-input {
       width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0;
@@ -41,7 +40,6 @@
     }
     .search-input:focus { border-color: #e67e22; }
 
-    /* 🏷️ 分類頁籤按鈕列 */
     .category-nav {
       display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;
       margin-bottom: 15px; scrollbar-width: none;
@@ -57,7 +55,6 @@
       background: #e67e22; color: #fff; border-color: #d35400; font-weight: bold;
     }
 
-    /* 分類標題 */
     .category-title {
       font-size: 18px; font-weight: bold; margin: 20px 0 10px 0;
       color: #d35400; border-left: 4px solid #d35400; padding-left: 8px;
@@ -73,7 +70,6 @@
       border-radius: 8px; font-size: 15px; outline: none;
     }
 
-    /* 單一品項卡片 */
     .menu-item-card {
       background: white; border-radius: 12px; padding: 15px;
       margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
@@ -90,7 +86,6 @@
     }
     .qty-val { font-size: 16px; font-weight: bold; min-width: 20px; text-align: center; }
 
-    /* 品項專屬客製化區域 (預設隱藏) */
     .item-custom-options {
       display: none;
       margin-top: 12px; padding-top: 10px;
@@ -99,7 +94,6 @@
     }
     .sub-option-label { font-size: 13px; font-weight: bold; color: #d35400; margin-bottom: 6px; }
 
-    /* 按鈕選擇器樣式 */
     .option-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
     .option-btn {
       padding: 5px 11px; border: 1px solid #ccc; border-radius: 14px;
@@ -133,10 +127,8 @@
 </div>
 
 <div class="container">
-  <!-- 營業狀態提示橫幅 -->
   <div id="storeStatusNotice" class="status-banner"></div>
 
-  <!-- 顧客資料 -->
   <div class="form-group">
     <label for="custName">👤 訂購人姓名</label>
     <input type="text" id="custName" placeholder="請輸入姓名">
@@ -146,7 +138,7 @@
     <input type="tel" id="custPhone" placeholder="請輸入電話號碼">
   </div>
 
-  <!-- 🌶️ 全單預設調味 (九層塔與預設辣度) -->
+  <!-- 🌶️ 全單預設調味 (已移除微辣) -->
   <div class="form-group">
     <label>🧂 整包炸物預設辣度 / 胡椒</label>
     <div class="option-group">
@@ -169,22 +161,17 @@
     <textarea id="orderRemark" rows="2" placeholder="例：炸酥一點、醬多..."></textarea>
   </div>
 
-  <!-- 🔍 搜尋與分類頁籤區塊 -->
   <div class="search-box">
     <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜尋你想吃的餐點..." oninput="handleFilterChange()">
   </div>
 
-  <div class="category-nav" id="categoryNav">
-    <!-- 動態生成分類按鈕 -->
-  </div>
+  <div class="category-nav" id="categoryNav"></div>
 
-  <!-- 菜單區域 -->
   <div id="menuContainer">
     <div style="text-align: center; color: #888; padding: 30px;">正在載入最新菜單...</div>
   </div>
 </div>
 
-<!-- 底部結帳欄 -->
 <div class="footer-bar">
   <div>
     <span style="font-size: 13px; color: #777;">合計</span>
@@ -199,7 +186,7 @@
 
   let userLineUid = "";
   let menuData = [];
-  let cart = {}; // { index: count }
+  let cart = {};
   let currentCategory = "全部";
 
   function initLiff() {
@@ -309,7 +296,6 @@
               </div>
             </div>
 
-            <!-- 客製化選項 (點擊後才顯示) -->
             <div class="item-custom-options" id="custom-${item.index}" style="display: ${isShowOptions ? 'block' : 'none'};">
               ${renderCustomOptionsHTML(item.index, item.name)}
             </div>
@@ -320,7 +306,7 @@
     }
   }
 
-  // 生成雞排或薯條的卡片下方選項
+  // 雞排選項 (已移除微辣)
   function renderCustomOptionsHTML(idx, name) {
     if (name.includes("雞排")) {
       return `
@@ -334,7 +320,6 @@
           <label class="option-btn active"><input type="radio" name="spice-${idx}" value="胡椒" checked onclick="selectOption(this)">胡椒</label>
           <label class="option-btn"><input type="radio" name="spice-${idx}" value="甘梅" onclick="selectOption(this)">甘梅</label>
           <label class="option-btn"><input type="radio" name="spice-${idx}" value="不加胡椒" onclick="selectOption(this)">不加胡椒</label>
-          <label class="option-btn"><input type="radio" name="spice-${idx}" value="微辣" onclick="selectOption(this)">微辣</label>
           <label class="option-btn"><input type="radio" name="spice-${idx}" value="小辣" onclick="selectOption(this)">小辣</label>
           <label class="option-btn"><input type="radio" name="spice-${idx}" value="中辣" onclick="selectOption(this)">中辣</label>
           <label class="option-btn"><input type="radio" name="spice-${idx}" value="大辣" onclick="selectOption(this)">大辣</label>
@@ -368,7 +353,6 @@
     const item = menuData[index];
     const customDiv = document.getElementById(`custom-${index}`);
     
-    // 如果是雞排或薯條，自動控制卡片選項顯示/隱藏
     if (customDiv && (item.name.includes("雞排") || item.name.includes("薯條"))) {
       if (cart[index] > 0) {
         customDiv.style.display = "block";
@@ -435,7 +419,6 @@
       if (count > 0) {
         let itemDetailStr = `${item.name} x${count}`;
         
-        // 雞排選項收集
         if (item.name.includes("雞排")) {
           const cutEl = document.querySelector(`input[name="cut-${idx}"]:checked`);
           const spiceEl = document.querySelector(`input[name="spice-${idx}"]:checked`);
@@ -444,7 +427,6 @@
           itemDetailStr += ` (${cutVal}、${spiceVal})`;
         }
         
-        // 薯條選項收集
         if (item.name.includes("薯條")) {
           const flavorEl = document.querySelector(`input[name="friesFlavor-${idx}"]:checked`);
           const flavorVal = flavorEl ? flavorEl.value : "胡椒";
