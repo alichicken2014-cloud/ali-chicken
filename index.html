@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>阿力香雞排 崑山店 - 線上點餐</title>
-  <!-- LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; }
@@ -13,7 +12,7 @@
       background-color: #f8f9fa;
       margin: 0; padding: 0;
       color: #333;
-      padding-bottom: 100px;
+      padding-bottom: 120px;
     }
     .header {
       background: linear-gradient(135deg, #e67e22, #d35400);
@@ -24,7 +23,7 @@
     .header h1 { margin: 0; font-size: 22px; }
     .header p { margin: 5px 0 0 0; font-size: 13px; opacity: 0.9; }
 
-    /* 營業狀態提示條 */
+    /* 營業狀態提示橫幅 */
     .status-banner {
       background-color: #e74c3c; color: white;
       text-align: center; padding: 12px 15px;
@@ -49,7 +48,17 @@
       width: 100%; padding: 10px; border: 1px solid #ddd;
       border-radius: 8px; font-size: 15px; outline: none;
     }
-    .form-group input:focus, .form-group textarea:focus { border-color: #e67e22; }
+
+    /* 調味單選選項樣式 */
+    .option-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .option-btn {
+      padding: 6px 12px; border: 1px solid #ccc; border-radius: 16px;
+      font-size: 13px; background: #fff; cursor: pointer; user-select: none;
+    }
+    .option-btn input { display: none; }
+    .option-btn.active {
+      background: #e67e22; color: white; border-color: #d35400; font-weight: bold;
+    }
 
     .menu-item {
       background: white; border-radius: 12px; padding: 15px;
@@ -65,7 +74,6 @@
       background: #eee; font-size: 18px; font-weight: bold; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
     }
-    .btn-qty:active { background: #ddd; }
     .qty-val { font-size: 16px; font-weight: bold; min-width: 20px; text-align: center; }
 
     .footer-bar {
@@ -80,9 +88,7 @@
       padding: 12px 24px; border-radius: 25px; font-size: 16px;
       font-weight: bold; cursor: pointer; transition: 0.2s;
     }
-    .btn-submit:disabled {
-      background: #b0bec5 !important; cursor: not-allowed;
-    }
+    .btn-submit:disabled { background: #b0bec5 !important; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -105,15 +111,39 @@
     <label for="custPhone">📞 聯絡電話</label>
     <input type="tel" id="custPhone" placeholder="請輸入電話號碼">
   </div>
+
+  <!-- 🌶️ 調味選擇區 -->
   <div class="form-group">
-    <label for="orderRemark">📝 全單備註 / 胡椒辣度需求</label>
-    <textarea id="orderRemark" rows="2" placeholder="例：香雞排不要切、大辣、整包胡椒..."></textarea>
+    <label>🌶️ 雞排處理</label>
+    <div class="option-group" id="cutOptions">
+      <label class="option-btn active"><input type="radio" name="cut" value="不切" checked onclick="selectOption(this)">不切</label>
+      <label class="option-btn"><input type="radio" name="cut" value="要切" onclick="selectOption(this)">要切</label>
+    </div>
+
+    <label style="margin-top: 12px;">🧂 胡椒 / 辣度需求</label>
+    <div class="option-group" id="spiceOptions">
+      <label class="option-btn active"><input type="radio" name="spice" value="胡椒" checked onclick="selectOption(this)">胡椒</label>
+      <label class="option-btn"><input type="radio" name="spice" value="不加胡椒" onclick="selectOption(this)">不加胡椒</label>
+      <label class="option-btn"><input type="radio" name="spice" value="微辣" onclick="selectOption(this)">微辣</label>
+      <label class="option-btn"><input type="radio" name="spice" value="小辣" onclick="selectOption(this)">小辣</label>
+      <label class="option-btn"><input type="radio" name="spice" value="中辣" onclick="selectOption(this)">中辣</label>
+      <label class="option-btn"><input type="radio" name="spice" value="大辣" onclick="selectOption(this)">大辣</label>
+    </div>
+
+    <label style="margin-top: 12px;">🌿 九層塔需求</label>
+    <div class="option-group" id="basilOptions">
+      <label class="option-btn active"><input type="radio" name="basil" value="要九層塔" checked onclick="selectOption(this)">要九層塔</label>
+      <label class="option-btn"><input type="radio" name="basil" value="不要九層塔" onclick="selectOption(this)">不要九層塔</label>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="orderRemark">📝 其他特別備註</label>
+    <textarea id="orderRemark" rows="2" placeholder="例：醬多、炸酥一點..."></textarea>
   </div>
 
   <div class="section-title">美味餐點</div>
-  <div id="menuContainer">
-    <!-- 餐點項目動態產出 -->
-  </div>
+  <div id="menuContainer"></div>
 </div>
 
 <!-- 底部結帳欄 -->
@@ -126,14 +156,13 @@
 </div>
 
 <script>
-  // ⚠️ 請替換為您最即時部署的 GAS 網址與 LIFF ID
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
-  const MY_LIFF_ID = "2011276802-mdrsLFND"; // 請填入 LINE Developers 的 LIFF ID
+  const MY_LIFF_ID = "YOUR_LIFF_ID"; 
 
   let userLineUid = "";
   let cart = {};
 
-  // 菜單明細設定
+  // 完整菜單數據
   const menuData = [
     { id: "p1", name: "香雞排(片)", price: 75 },
     { id: "p2", name: "三角骨(份)", price: 50 },
@@ -142,27 +171,23 @@
     { id: "p5", name: "薯條(份)", price: 35 },
     { id: "p6", name: "甜不辣(份)", price: 35 },
     { id: "p7", name: "米血(塊)", price: 15 },
-    { id: "p8", name: "豆包(份)", price: 30 }
+    { id: "p8", name: "豆包(份)", price: 30 },
+    { id: "p9", name: "百頁豆腐(份)", price: 30 },
+    { id: "p10", name: "銀絲卷(顆)", price: 20 },
+    { id: "p11", name: "小熱狗(份)", price: 20 },
+    { id: "p12", name: "四季豆(份)", price: 35 }
   ];
 
-  // 初始化 LIFF
   function initLiff() {
     if (MY_LIFF_ID && MY_LIFF_ID !== "YOUR_LIFF_ID") {
-      liff.init({ liffId: MY_LIFF_ID })
-        .then(() => {
-          if (liff.isLoggedIn()) {
-            liff.getProfile().then(profile => {
-              userLineUid = profile.userId;
-            }).catch(err => console.error(err));
-          } else {
-            liff.login();
-          }
-        })
-        .catch(err => console.error("LIFF 初始化失敗:", err));
+      liff.init({ liffId: MY_LIFF_ID }).then(() => {
+        if (liff.isLoggedIn()) {
+          liff.getProfile().then(p => { userLineUid = p.userId; });
+        } else { liff.login(); }
+      }).catch(err => console.error(err));
     }
   }
 
-  // 渲染菜單列表
   function renderMenu() {
     const container = document.getElementById('menuContainer');
     let html = '';
@@ -185,24 +210,26 @@
     container.innerHTML = html;
   }
 
-  // 更新餐點數量
+  // 調味按鈕點擊切換樣式
+  function selectOption(el) {
+    const group = el.closest('.option-group');
+    group.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('active'));
+    el.parentElement.classList.add('active');
+  }
+
   function updateQty(id, delta) {
     cart[id] = Math.max(0, cart[id] + delta);
     document.getElementById(`qty-${id}`).innerText = cart[id];
     calculateTotal();
   }
 
-  // 計算總金額
   function calculateTotal() {
     let total = 0;
-    menuData.forEach(item => {
-      total += cart[item.id] * item.price;
-    });
+    menuData.forEach(item => { total += cart[item.id] * item.price; });
     document.getElementById('totalPriceDisplay').innerText = `$${total}`;
     return total;
   }
 
-  // 🌟 檢查營業狀態與自動鎖定
   function checkStoreStatus() {
     fetch(GAS_WEB_APP_URL + "?action=checkStatus")
       .then(res => res.json())
@@ -221,12 +248,9 @@
           notice.style.display = "none";
         }
       })
-      .catch(err => {
-        console.error("無法取得營業狀態:", err);
-      });
+      .catch(err => console.error(err));
   }
 
-  // 送出訂單
   function submitOrder() {
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
@@ -237,14 +261,20 @@
       alert("請填寫姓名與電話號碼！");
       return;
     }
-
     if (total === 0) {
       alert("請至少選擇一項餐點！");
       return;
     }
 
-    // 整理餐點字串
-    let itemsArr = [];
+    // 取得選取的調味選項
+    const cutVal = document.querySelector('input[name="cut"]:checked').value;
+    const spiceVal = document.querySelector('input[name="spice"]:checked').value;
+    const basilVal = document.querySelector('input[name="basil"]:checked').value;
+
+    // 組合調味字串與品項
+    let seasoningSummary = `【整包調味】${cutVal}、${spiceVal}、${basilVal}`;
+    let itemsArr = [seasoningSummary];
+    
     menuData.forEach(item => {
       if (cart[item.id] > 0) {
         itemsArr.push(`${item.name} x${cart[item.id]}`);
@@ -293,7 +323,6 @@
     });
   }
 
-  // 頁面初始化
   window.onload = function() {
     renderMenu();
     initLiff();
