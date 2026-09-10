@@ -34,19 +34,17 @@
     .container { padding: 15px; max-width: 600px; margin: 0 auto; }
 
     /* 🔍 搜尋框樣式 */
-    .search-box {
-      margin-bottom: 15px;
-    }
+    .search-box { margin-bottom: 12px; }
     .search-input {
       width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0;
       border-radius: 25px; font-size: 15px; outline: none; transition: 0.2s;
     }
     .search-input:focus { border-color: #e67e22; }
 
-    /* 🏷️ 分類頁籤按鈕列 (支援左右滑動) */
+    /* 🏷️ 分類頁籤按鈕列 */
     .category-nav {
       display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;
-      margin-bottom: 15px; scrollbar-width: none; /* 隱藏捲軸 */
+      margin-bottom: 15px; scrollbar-width: none;
     }
     .category-nav::-webkit-scrollbar { display: none; }
     
@@ -75,30 +73,13 @@
       border-radius: 8px; font-size: 15px; outline: none;
     }
 
-    /* 🐔 雞排專屬處理選單 (預設隱藏) */
-    #chickenCutGroup {
-      display: none;
-      background: #fff3e0;
-      border: 1px solid #ffe0b2;
-      animation: fadeIn 0.3s ease-in-out;
-    }
-
-    .option-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-    .option-btn {
-      padding: 6px 12px; border: 1px solid #ccc; border-radius: 16px;
-      font-size: 13px; background: #fff; cursor: pointer; user-select: none;
-    }
-    .option-btn input { display: none; }
-    .option-btn.active {
-      background: #e67e22; color: white; border-color: #d35400; font-weight: bold;
-    }
-
-    .menu-item {
+    /* 單一品項卡片 */
+    .menu-item-card {
       background: white; border-radius: 12px; padding: 15px;
-      margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      transition: all 0.2s ease-in-out;
     }
-    .menu-info { flex-grow: 1; }
+    .item-header { display: flex; justify-content: space-between; align-items: center; }
     .menu-name { font-size: 16px; font-weight: bold; }
     .menu-price { color: #e67e22; font-weight: bold; margin-top: 4px; }
     .qty-control { display: flex; align-items: center; gap: 10px; }
@@ -108,6 +89,26 @@
       display: flex; align-items: center; justify-content: center;
     }
     .qty-val { font-size: 16px; font-weight: bold; min-width: 20px; text-align: center; }
+
+    /* 品項專屬客製化區域 (預設隱藏) */
+    .item-custom-options {
+      display: none;
+      margin-top: 12px; padding-top: 10px;
+      border-top: 1px dashed #eee; background: #fffdf9;
+      border-radius: 8px; padding: 10px;
+    }
+    .sub-option-label { font-size: 13px; font-weight: bold; color: #d35400; margin-bottom: 6px; }
+
+    /* 按鈕選擇器樣式 */
+    .option-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .option-btn {
+      padding: 5px 11px; border: 1px solid #ccc; border-radius: 14px;
+      font-size: 12px; background: #fff; cursor: pointer; user-select: none;
+    }
+    .option-btn input { display: none; }
+    .option-btn.active {
+      background: #e67e22; color: white; border-color: #d35400; font-weight: bold;
+    }
 
     .footer-bar {
       position: fixed; bottom: 0; left: 0; right: 0;
@@ -145,31 +146,22 @@
     <input type="tel" id="custPhone" placeholder="請輸入電話號碼">
   </div>
 
-  <!-- 🐔 點雞排時才會出現的切法設定 -->
-  <div class="form-group" id="chickenCutGroup">
-    <label style="color: #d35400;">🍗 雞排切法處理</label>
-    <div class="option-group">
-      <label class="option-btn active"><input type="radio" name="cut" value="不切" checked onclick="selectOption(this)">不切</label>
-      <label class="option-btn"><input type="radio" name="cut" value="要切" onclick="selectOption(this)">要切</label>
-    </div>
-  </div>
-
-  <!-- 🌶️ 全單調味選擇 -->
+  <!-- 🌶️ 全單預設調味 (九層塔與預設辣度) -->
   <div class="form-group">
-    <label>🧂 全單胡椒 / 辣度需求</label>
+    <label>🧂 其他炸物辣度 / 胡椒預設</label>
     <div class="option-group">
-      <label class="option-btn active"><input type="radio" name="spice" value="胡椒" checked onclick="selectOption(this)">胡椒</label>
-      <label class="option-btn"><input type="radio" name="spice" value="不加胡椒" onclick="selectOption(this)">不加胡椒</label>
-      <label class="option-btn"><input type="radio" name="spice" value="微辣" onclick="selectOption(this)">微辣</label>
-      <label class="option-btn"><input type="radio" name="spice" value="小辣" onclick="selectOption(this)">小辣</label>
-      <label class="option-btn"><input type="radio" name="spice" value="中辣" onclick="selectOption(this)">中辣</label>
-      <label class="option-btn"><input type="radio" name="spice" value="大辣" onclick="selectOption(this)">大辣</label>
+      <label class="option-btn active"><input type="radio" name="globalSpice" value="胡椒" checked onclick="selectOption(this)">胡椒</label>
+      <label class="option-btn"><input type="radio" name="globalSpice" value="不加胡椒" onclick="selectOption(this)">不加胡椒</label>
+      <label class="option-btn"><input type="radio" name="globalSpice" value="微辣" onclick="selectOption(this)">微辣</label>
+      <label class="option-btn"><input type="radio" name="globalSpice" value="小辣" onclick="selectOption(this)">小辣</label>
+      <label class="option-btn"><input type="radio" name="globalSpice" value="中辣" onclick="selectOption(this)">中辣</label>
+      <label class="option-btn"><input type="radio" name="globalSpice" value="大辣" onclick="selectOption(this)">大辣</label>
     </div>
 
-    <label style="margin-top: 12px;">🌿 九層塔需求</label>
+    <label style="margin-top: 10px;">🌿 全單九層塔需求</label>
     <div class="option-group">
-      <label class="option-btn active"><input type="radio" name="basil" value="要九層塔" checked onclick="selectOption(this)">要九層塔</label>
-      <label class="option-btn"><input type="radio" name="basil" value="不要九層塔" onclick="selectOption(this)">不要九層塔</label>
+      <label class="option-btn active"><input type="radio" name="globalBasil" value="要九層塔" checked onclick="selectOption(this)">要九層塔</label>
+      <label class="option-btn"><input type="radio" name="globalBasil" value="不要九層塔" onclick="selectOption(this)">不要九層塔</label>
     </div>
   </div>
 
@@ -208,7 +200,7 @@
 
   let userLineUid = "";
   let menuData = [];
-  let cart = {};
+  let cart = {}; // { index: count }
   let currentCategory = "全部";
 
   function initLiff() {
@@ -221,7 +213,6 @@
     }
   }
 
-  // 載入菜單
   function fetchMenuData() {
     fetch(GAS_WEB_APP_URL + "?action=getMenu")
       .then(res => res.json())
@@ -239,7 +230,6 @@
       });
   }
 
-  // 建立分類頁籤按鈕
   function buildCategoryTabs() {
     const nav = document.getElementById('categoryNav');
     const categories = ["全部"];
@@ -258,7 +248,6 @@
     nav.innerHTML = navHtml;
   }
 
-  // 切換分類
   function switchCategory(catName, btnEl) {
     currentCategory = catName;
     document.querySelectorAll('.cat-tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -266,21 +255,18 @@
     renderFilteredMenu();
   }
 
-  // 搜尋或分類變更時觸發
   function handleFilterChange() {
     renderFilteredMenu();
   }
 
-  // 根據搜尋與分類渲染菜單
   function renderFilteredMenu() {
     const container = document.getElementById('menuContainer');
     const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
     container.innerHTML = '';
 
-    // 篩選品項
     const filteredItems = [];
     menuData.forEach((item, index) => {
-      if (!cart.hasOwnProperty(index)) cart[index] = 0; // 初始化數量
+      if (!cart.hasOwnProperty(index)) cart[index] = 0;
 
       const matchesCat = (currentCategory === "全部") || (item.category === currentCategory);
       const matchesSearch = item.name.toLowerCase().includes(searchText);
@@ -295,7 +281,6 @@
       return;
     }
 
-    // 按分類分群呈現
     const grouped = {};
     filteredItems.forEach(item => {
       const cat = item.category || "其他";
@@ -306,22 +291,67 @@
     for (const catName in grouped) {
       let catHtml = `<div class="category-title">${catName}</div>`;
       grouped[catName].forEach(item => {
+        const isChicken = item.name.includes("雞排");
+        const isFries = item.name.includes("薯條");
+        const count = cart[item.index];
+        const isShowOptions = count > 0 && (isChicken || isFries);
+
         catHtml += `
-          <div class="menu-item">
-            <div class="menu-info">
-              <div class="menu-name">${item.name}</div>
-              <div class="menu-price">$${item.price}</div>
+          <div class="menu-item-card" id="card-${item.index}">
+            <div class="item-header">
+              <div class="menu-info">
+                <div class="menu-name">${item.name}</div>
+                <div class="menu-price">$${item.price}</div>
+              </div>
+              <div class="qty-control">
+                <button class="btn-qty" onclick="updateQty(${item.index}, -1)">-</button>
+                <span class="qty-val" id="qty-${item.index}">${count}</span>
+                <button class="btn-qty" onclick="updateQty(${item.index}, 1)">+</button>
+              </div>
             </div>
-            <div class="qty-control">
-              <button class="btn-qty" onclick="updateQty(${item.index}, -1)">-</button>
-              <span class="qty-val" id="qty-${item.index}">${cart[item.index]}</span>
-              <button class="btn-qty" onclick="updateQty(${item.index}, 1)">+</button>
+
+            <!-- 客製化選項 (點擊後才顯示) -->
+            <div class="item-custom-options" id="custom-${item.index}" style="display: ${isShowOptions ? 'block' : 'none'};">
+              ${renderCustomOptionsHTML(item.index, item.name)}
             </div>
           </div>
         `;
       });
       container.innerHTML += catHtml;
     }
+  }
+
+  // 生成雞排或薯條的卡片下方選項
+  function renderCustomOptionsHTML(idx, name) {
+    if (name.includes("雞排")) {
+      return `
+        <div class="sub-option-label">🍗 雞排切法：</div>
+        <div class="option-group">
+          <label class="option-btn active"><input type="radio" name="cut-${idx}" value="不切" checked onclick="selectOption(this)">不切</label>
+          <label class="option-btn"><input type="radio" name="cut-${idx}" value="要切" onclick="selectOption(this)">要切</label>
+        </div>
+        <div class="sub-option-label">🧂 雞排調味：</div>
+        <div class="option-group">
+          <label class="option-btn active"><input type="radio" name="spice-${idx}" value="胡椒" checked onclick="selectOption(this)">胡椒</label>
+          <label class="option-btn"><input type="radio" name="spice-${idx}" value="不加胡椒" onclick="selectOption(this)">不加胡椒</label>
+          <label class="option-btn"><input type="radio" name="spice-${idx}" value="微辣" onclick="selectOption(this)">微辣</label>
+          <label class="option-btn"><input type="radio" name="spice-${idx}" value="小辣" onclick="selectOption(this)">小辣</label>
+          <label class="option-btn"><input type="radio" name="spice-${idx}" value="中辣" onclick="selectOption(this)">中辣</label>
+          <label class="option-btn"><input type="radio" name="spice-${idx}" value="大辣" onclick="selectOption(this)">大辣</label>
+        </div>
+      `;
+    } else if (name.includes("薯條")) {
+      return `
+        <div class="sub-option-label">🍟 薯條調味：</div>
+        <div class="option-group">
+          <label class="option-btn active"><input type="radio" name="friesFlavor-${idx}" value="胡椒" checked onclick="selectOption(this)">胡椒</label>
+          <label class="option-btn"><input type="radio" name="friesFlavor-${idx}" value="甘梅" onclick="selectOption(this)">甘梅</label>
+          <label class="option-btn"><input type="radio" name="friesFlavor-${idx}" value="胡椒+甘梅" onclick="selectOption(this)">胡椒+甘梅</label>
+          <label class="option-btn"><input type="radio" name="friesFlavor-${idx}" value="原味(不加)" onclick="selectOption(this)">原味(不加)</label>
+        </div>
+      `;
+    }
+    return '';
   }
 
   function selectOption(el) {
@@ -334,20 +364,20 @@
     cart[index] = Math.max(0, cart[index] + delta);
     const qtyEl = document.getElementById(`qty-${index}`);
     if (qtyEl) qtyEl.innerText = cart[index];
-    
-    checkChickenCutVisibility();
-    calculateTotal();
-  }
 
-  function checkChickenCutVisibility() {
-    let hasChicken = false;
-    menuData.forEach((item, idx) => {
-      if (item.name.includes("雞排") && cart[idx] > 0) {
-        hasChicken = true;
+    const item = menuData[index];
+    const customDiv = document.getElementById(`custom-${index}`);
+    
+    // 如果是雞排或薯條，自動控制卡片選項顯示/隱藏
+    if (customDiv && (item.name.includes("雞排") || item.name.includes("薯條"))) {
+      if (cart[index] > 0) {
+        customDiv.style.display = "block";
+      } else {
+        customDiv.style.display = "none";
       }
-    });
-    const cutGroup = document.getElementById('chickenCutGroup');
-    cutGroup.style.display = hasChicken ? "block" : "none";
+    }
+
+    calculateTotal();
   }
 
   function calculateTotal() {
@@ -395,29 +425,36 @@
       return;
     }
 
-    const spiceVal = document.querySelector('input[name="spice"]:checked').value;
-    const basilVal = document.querySelector('input[name="basil"]:checked').value;
+    const globalSpice = document.querySelector('input[name="globalSpice"]:checked').value;
+    const globalBasil = document.querySelector('input[name="globalBasil"]:checked').value;
 
-    let cutText = "";
-    let hasChicken = false;
+    let itemsArr = [`【全單需求】${globalSpice}、${globalBasil}`];
+
     menuData.forEach((item, idx) => {
-      if (item.name.includes("雞排") && cart[idx] > 0) {
-        hasChicken = true;
+      const count = cart[idx];
+      if (count > 0) {
+        let itemDetailStr = `${item.name} x${count}`;
+        
+        // 雞排選項收集
+        if (item.name.includes("雞排")) {
+          const cutEl = document.querySelector(`input[name="cut-${idx}"]:checked`);
+          const spiceEl = document.querySelector(`input[name="spice-${idx}"]:checked`);
+          const cutVal = cutEl ? cutEl.value : "不切";
+          const spiceVal = spiceEl ? spiceEl.value : "胡椒";
+          itemDetailStr += ` (${cutVal}、${spiceVal})`;
+        }
+        
+        // 薯條選項收集
+        if (item.name.includes("薯條")) {
+          const flavorEl = document.querySelector(`input[name="friesFlavor-${idx}"]:checked`);
+          const flavorVal = flavorEl ? flavorEl.value : "胡椒";
+          itemDetailStr += ` (${flavorVal})`;
+        }
+
+        itemsArr.push(itemDetailStr);
       }
     });
-    if (hasChicken) {
-      const cutVal = document.querySelector('input[name="cut"]:checked').value;
-      cutText = `${cutVal}、`;
-    }
 
-    let seasoningSummary = `【整包調味】${cutText}${spiceVal}、${basilVal}`;
-    let itemsArr = [seasoningSummary];
-    
-    menuData.forEach((item, idx) => {
-      if (cart[idx] > 0) {
-        itemsArr.push(`${item.name} x${cart[idx]}`);
-      }
-    });
     const itemsDetail = itemsArr.join("\n");
 
     const submitBtn = document.getElementById('submitOrderBtn');
