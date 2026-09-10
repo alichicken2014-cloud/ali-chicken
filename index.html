@@ -33,6 +33,32 @@
 
     .container { padding: 15px; max-width: 600px; margin: 0 auto; }
 
+    /* 🔍 搜尋框樣式 */
+    .search-box {
+      margin-bottom: 15px;
+    }
+    .search-input {
+      width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0;
+      border-radius: 25px; font-size: 15px; outline: none; transition: 0.2s;
+    }
+    .search-input:focus { border-color: #e67e22; }
+
+    /* 🏷️ 分類頁籤按鈕列 (支援左右滑動) */
+    .category-nav {
+      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;
+      margin-bottom: 15px; scrollbar-width: none; /* 隱藏捲軸 */
+    }
+    .category-nav::-webkit-scrollbar { display: none; }
+    
+    .cat-tab-btn {
+      white-space: nowrap; padding: 8px 16px; border-radius: 20px;
+      border: 1px solid #ddd; background: #fff; font-size: 14px;
+      color: #555; cursor: pointer; transition: 0.2s; flex-shrink: 0;
+    }
+    .cat-tab-btn.active {
+      background: #e67e22; color: #fff; border-color: #d35400; font-weight: bold;
+    }
+
     /* 分類標題 */
     .category-title {
       font-size: 18px; font-weight: bold; margin: 20px 0 10px 0;
@@ -49,7 +75,7 @@
       border-radius: 8px; font-size: 15px; outline: none;
     }
 
-    /* 雞排專屬處理選單 (預設隱藏) */
+    /* 🐔 雞排專屬處理選單 (預設隱藏) */
     #chickenCutGroup {
       display: none;
       background: #fff3e0;
@@ -152,7 +178,16 @@
     <textarea id="orderRemark" rows="2" placeholder="例：炸酥一點、醬多..."></textarea>
   </div>
 
-  <!-- 菜單區域 (根據 Sheet 分類動態產出) -->
+  <!-- 🔍 搜尋與分類頁籤區塊 -->
+  <div class="search-box">
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜尋你想吃的餐點..." oninput="handleFilterChange()">
+  </div>
+
+  <div class="category-nav" id="categoryNav">
+    <!-- 動態生成分類按鈕 -->
+  </div>
+
+  <!-- 菜單區域 -->
   <div id="menuContainer">
     <div style="text-align: center; color: #888; padding: 30px;">正在載入最新菜單...</div>
   </div>
@@ -174,6 +209,7 @@
   let userLineUid = "";
   let menuData = [];
   let cart = {};
+  let currentCategory = "全部";
 
   function initLiff() {
     if (MY_LIFF_ID && MY_LIFF_ID !== "YOUR_LIFF_ID") {
@@ -185,14 +221,15 @@
     }
   }
 
-  // 從 Google Sheet 載入菜單資料
+  // 載入菜單
   function fetchMenuData() {
     fetch(GAS_WEB_APP_URL + "?action=getMenu")
       .then(res => res.json())
       .then(data => {
         if (data.success && data.menu) {
           menuData = data.menu;
-          renderCategorizedMenu();
+          buildCategoryTabs();
+          renderFilteredMenu();
         } else {
           document.getElementById('menuContainer').innerHTML = '<div style="text-align:center;color:red;padding:20px;">載入菜單失敗，請刷頁重試</div>';
         }
@@ -202,25 +239,73 @@
       });
   }
 
-  // 依照 Sheet 分類渲染菜單
-  function renderCategorizedMenu() {
-    const container = document.getElementById('menuContainer');
-    container.innerHTML = '';
+  // 建立分類頁籤按鈕
+  function buildCategoryTabs() {
+    const nav = document.getElementById('categoryNav');
+    const categories = ["全部"];
 
-    // 將品項按分類歸類
-    const categories = {};
-    menuData.forEach((item, index) => {
-      cart[index] = 0; // 初始化數量
-      if (!categories[item.category]) {
-        categories[item.category] = [];
+    menuData.forEach(item => {
+      if (item.category && !categories.includes(item.category)) {
+        categories.push(item.category);
       }
-      categories[item.category].push({ ...item, index });
     });
 
-    // 渲染每個分類
-    for (const catName in categories) {
+    let navHtml = '';
+    categories.forEach(cat => {
+      const activeClass = (cat === currentCategory) ? 'active' : '';
+      navHtml += `<button class="cat-tab-btn ${activeClass}" onclick="switchCategory('${cat}', this)">${cat}</button>`;
+    });
+    nav.innerHTML = navHtml;
+  }
+
+  // 切換分類
+  function switchCategory(catName, btnEl) {
+    currentCategory = catName;
+    document.querySelectorAll('.cat-tab-btn').forEach(btn => btn.classList.remove('active'));
+    btnEl.classList.add('active');
+    renderFilteredMenu();
+  }
+
+  // 搜尋或分類變更時觸發
+  function handleFilterChange() {
+    renderFilteredMenu();
+  }
+
+  // 根據搜尋與分類渲染菜單
+  function renderFilteredMenu() {
+    const container = document.getElementById('menuContainer');
+    const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
+    container.innerHTML = '';
+
+    // 篩選品項
+    const filteredItems = [];
+    menuData.forEach((item, index) => {
+      if (!cart.hasOwnProperty(index)) cart[index] = 0; // 初始化數量
+
+      const matchesCat = (currentCategory === "全部") || (item.category === currentCategory);
+      const matchesSearch = item.name.toLowerCase().includes(searchText);
+
+      if (matchesCat && matchesSearch) {
+        filteredItems.push({ ...item, index });
+      }
+    });
+
+    if (filteredItems.length === 0) {
+      container.innerHTML = '<div style="text-align:center; color:#888; padding:30px;">找不到符合的餐點 🙁</div>';
+      return;
+    }
+
+    // 按分類分群呈現
+    const grouped = {};
+    filteredItems.forEach(item => {
+      const cat = item.category || "其他";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(item);
+    });
+
+    for (const catName in grouped) {
       let catHtml = `<div class="category-title">${catName}</div>`;
-      categories[catName].forEach(item => {
+      grouped[catName].forEach(item => {
         catHtml += `
           <div class="menu-item">
             <div class="menu-info">
@@ -229,7 +314,7 @@
             </div>
             <div class="qty-control">
               <button class="btn-qty" onclick="updateQty(${item.index}, -1)">-</button>
-              <span class="qty-val" id="qty-${item.index}">0</span>
+              <span class="qty-val" id="qty-${item.index}">${cart[item.index]}</span>
               <button class="btn-qty" onclick="updateQty(${item.index}, 1)">+</button>
             </div>
           </div>
@@ -247,14 +332,13 @@
 
   function updateQty(index, delta) {
     cart[index] = Math.max(0, cart[index] + delta);
-    document.getElementById(`qty-${index}`).innerText = cart[index];
+    const qtyEl = document.getElementById(`qty-${index}`);
+    if (qtyEl) qtyEl.innerText = cart[index];
     
-    // 🌟 檢查是否有點雞排，有的話顯示切法選項
     checkChickenCutVisibility();
     calculateTotal();
   }
 
-  // 判定是否點了雞排，控制「切/不切」選單顯示與否
   function checkChickenCutVisibility() {
     let hasChicken = false;
     menuData.forEach((item, idx) => {
@@ -269,7 +353,7 @@
   function calculateTotal() {
     let total = 0;
     menuData.forEach((item, idx) => {
-      total += cart[idx] * item.price;
+      total += (cart[idx] || 0) * item.price;
     });
     document.getElementById('totalPriceDisplay').innerText = `$${total}`;
     return total;
@@ -314,7 +398,6 @@
     const spiceVal = document.querySelector('input[name="spice"]:checked').value;
     const basilVal = document.querySelector('input[name="basil"]:checked').value;
 
-    // 檢查是否有點雞排，有的話加上切法
     let cutText = "";
     let hasChicken = false;
     menuData.forEach((item, idx) => {
