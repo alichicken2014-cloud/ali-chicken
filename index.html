@@ -148,7 +148,7 @@
 
   <!-- 🌶️ 全單預設調味 (九層塔與預設辣度) -->
   <div class="form-group">
-    <label>🧂 其他炸物辣度 / 胡椒預設</label>
+    <label>🧂 整包炸物預設辣度 / 胡椒</label>
     <div class="option-group">
       <label class="option-btn active"><input type="radio" name="globalSpice" value="胡椒" checked onclick="selectOption(this)">胡椒</label>
       <label class="option-btn"><input type="radio" name="globalSpice" value="不加胡椒" onclick="selectOption(this)">不加胡椒</label>
@@ -333,6 +333,7 @@
         <div class="sub-option-label">🧂 雞排調味：</div>
         <div class="option-group">
           <label class="option-btn active"><input type="radio" name="spice-${idx}" value="胡椒" checked onclick="selectOption(this)">胡椒</label>
+          <label class="option-btn"><input type="radio" name="spice-${idx}" value="甘梅" onclick="selectOption(this)">甘梅</label>
           <label class="option-btn"><input type="radio" name="spice-${idx}" value="不加胡椒" onclick="selectOption(this)">不加胡椒</label>
           <label class="option-btn"><input type="radio" name="spice-${idx}" value="微辣" onclick="selectOption(this)">微辣</label>
           <label class="option-btn"><input type="radio" name="spice-${idx}" value="小辣" onclick="selectOption(this)">小辣</label>
@@ -346,8 +347,8 @@
         <div class="option-group">
           <label class="option-btn active"><input type="radio" name="friesFlavor-${idx}" value="胡椒" checked onclick="selectOption(this)">胡椒</label>
           <label class="option-btn"><input type="radio" name="friesFlavor-${idx}" value="甘梅" onclick="selectOption(this)">甘梅</label>
-          <label class="option-btn"><input type="radio" name="friesFlavor-${idx}" value="胡椒+甘梅" onclick="selectOption(this)">胡椒+甘梅</label>
           <label class="option-btn"><input type="radio" name="friesFlavor-${idx}" value="原味(不加)" onclick="selectOption(this)">原味(不加)</label>
+          <label class="option-btn"><input type="radio" name="friesFlavor-${idx}" value="隨整包" onclick="selectOption(this)">隨整包</label>
         </div>
       `;
     }
