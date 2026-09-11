@@ -183,7 +183,7 @@
 
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
-  const MY_LIFF_ID = "2011276802-mdrsLFND"; // 已為您設定好的 LIFF ID
+  const MY_LIFF_ID = "2011276802-mdrsLFND";
 
   let userLineUid = "";
   let menuData = [];
@@ -392,11 +392,19 @@
     calculateTotal();
   }
 
+  // 🌟 強化金額計算邏輯 (自動處理文字/數字型態問題)
   function calculateTotal() {
     let total = 0;
     menuData.forEach((item, idx) => {
-      total += (cart[idx] || 0) * item.price;
+      const qty = Number(cart[idx]) || 0;
+      if (qty > 0) {
+        // 清除任何非數字字元 (只留數字與小數點)
+        const cleanPrice = String(item.price).replace(/[^0-9.]/g, '');
+        const price = parseFloat(cleanPrice) || 0;
+        total += qty * price;
+      }
     });
+    
     document.getElementById('totalPriceDisplay').innerText = `$${total}`;
     return total;
   }
