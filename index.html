@@ -183,22 +183,44 @@
 
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
-  const MY_LIFF_ID = "YOUR_LIFF_ID"; // 如果您有 LIFF ID，請替換此處
+  const MY_LIFF_ID = "2011276802-mdrsLFND"; // 已為您設定好的 LIFF ID
 
   let userLineUid = "";
   let menuData = [];
   let cart = {};
   let currentCategory = "全部";
 
-  function initLiff() {
-    if (MY_LIFF_ID && MY_LIFF_ID !== "YOUR_LIFF_ID" && typeof liff !== "undefined") {
-      liff.init({ liffId: MY_LIFF_ID }).then(() => {
-        if (liff.isLoggedIn()) {
-          liff.getProfile().then(p => { userLineUid = p.userId; });
-        } else {
-          liff.login();
-        }
-      }).catch(err => console.error("LIFF 初始化失敗:", err));
+  // LIFF 初始化
+  async function initLiff() {
+    const submitBtn = document.getElementById('submitOrderBtn');
+
+    if (typeof liff === "undefined") {
+      console.error("LIFF SDK 未載入");
+      return;
+    }
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "驗證身份中...";
+      }
+
+      await liff.init({ liffId: MY_LIFF_ID });
+
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        userLineUid = profile.userId;
+        console.log("✅ 成功取得 LINE UID:", userLineUid);
+      } else {
+        liff.login();
+      }
+    } catch (err) {
+      console.error("❌ LIFF 初始化失敗:", err);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "確認下單";
+      }
     }
   }
 
@@ -248,7 +270,6 @@
   function handleFilterChange() {
     const searchText = document.getElementById('searchInput').value.trim();
     if (searchText !== "") {
-      // 搜尋時切換回「全部」頁籤，確保符合搜尋條件的餐點能全部顯示
       currentCategory = "全部";
       document.querySelectorAll('.cat-tab-btn').forEach((btn, index) => {
         btn.classList.toggle('active', index === 0);
@@ -416,6 +437,11 @@
       return;
     }
 
+    if (!userLineUid) {
+      alert("尚未成功驗證 LINE 帳號，請重新關閉開啟此頁面！");
+      return;
+    }
+
     const globalSpiceEl = document.querySelector('input[name="globalSpice"]:checked');
     const globalBasilEl = document.querySelector('input[name="globalBasil"]:checked');
     
@@ -433,7 +459,7 @@
           const cutEl = document.querySelector(`input[name="cut-${idx}"]:checked`);
           const spiceEl = document.querySelector(`input[name="spice-${idx}"]:checked`);
           const cutVal = cutEl ? cutEl.value : "不切";
-          const spiceVal = spiceEl ? spiceEl.value : "胡椒";
+          const spiceVal = spiceEl ? spiceVal.value : "胡椒";
           itemDetailStr += ` (${cutVal}、${spiceVal})`;
         }
         
@@ -463,7 +489,6 @@
       lineUid: userLineUid
     };
 
-    // 修正 POST 發送機制，避免跨網域 Header 引發 302 CORS 錯誤
     fetch(GAS_WEB_APP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
