@@ -62,8 +62,8 @@
 
     /* 🌟 細明體大字列印設定 */
     @media print {
-      body * { display: none !important; }
-      #printArea, #printArea * { display: block !important; visibility: visible !important; }
+      body * { visibility: hidden !important; }
+      #printArea, #printArea * { visibility: visible !important; }
       #printArea {
         position: absolute !important;
         left: 0 !important;
@@ -101,12 +101,13 @@
 <div id="printArea"></div>
 
 <script>
-  // ⚠️ 請確認為您最新的 GAS 部署網址
+  // ⚠️ 最新 GAS 部署網址
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
 
   let knownOrderNos = new Set();
   let isFirstLoad = true;
   let currentIsOpen = true;
+  let cachedOrders = [];
 
   function fetchOrders() {
     fetch(GAS_WEB_APP_URL + "?action=getKitchenData")
@@ -116,30 +117,29 @@
           updateStoreBtn(data.isOpen);
 
           let hasNewOrder = false;
-          let newestOrder = null;
 
           if (data.orders) {
+            cachedOrders = data.orders; // 儲存快取供列印使用
             data.orders.forEach(order => {
               if (!knownOrderNos.has(order.orderNo)) {
                 knownOrderNos.add(order.orderNo);
                 if (!isFirstLoad) {
                   hasNewOrder = true;
-                  newestOrder = order;
                 }
               }
             });
 
             renderOrders(data.orders);
 
-            if (!isFirstLoad && hasNewOrder && newestOrder) {
+            // 只有在非首次載入且有新訂單時播放提示音
+            if (!isFirstLoad && hasNewOrder) {
               playAlertSound();
-              printReceipt(newestOrder);
             }
           }
           isFirstLoad = false;
         }
       })
-      .catch(err => console.error(err));
+      .catch(err => console.error("Fetch Orders Error:", err));
   }
 
   function toggleStoreStatus() {
@@ -153,7 +153,7 @@
 
     fetch(GAS_WEB_APP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'toggleStoreStatus', isOpen: targetState })
     })
     .then(res => res.json())
@@ -163,11 +163,12 @@
         updateStoreBtn(res.isOpen);
         alert(`已切換狀態為：${res.isOpen ? '🟢 營業中' : '🔴 臨時公休'}`);
       } else {
-        alert('切換失敗：' + res.error);
+        alert('切換失敗：' + (res.error || '未知錯誤'));
       }
     })
-    .catch(() => {
+    .catch(err => {
       btn.disabled = false;
+      console.error("Toggle Store Error:", err);
       alert('連線失敗，請重試');
     });
   }
@@ -186,7 +187,9 @@
 
   function playAlertSound() {
     const audio = document.getElementById('audioNotice');
-    if (audio) { audio.play().catch(e => {}); }
+    if (audio) { 
+      audio.play().catch(e => console.log("Audio play blocked:", e)); 
+    }
   }
 
   function renderOrders(orders) {
@@ -198,7 +201,6 @@
 
     let html = '';
     orders.forEach(order => {
-      const orderJson = JSON.stringify(order).replace(/'/g, "&apos;");
       html += `
         <div class="order-card">
           <div>
@@ -207,11 +209,11 @@
               <span class="order-time">🕒 ${order.time}</span>
             </div>
             <div class="order-cust">👤 ${order.name} (${order.phone})</div>
-            ${order.remark ? `<div class="order-remark">📝 備註：${order.remark}</div>` : ''}
-            <div class="order-items">${order.itemsDetail}</div>
+            ${order.remark ? `<div class="order-remark">📝 備註：${escapeHtml(order.remark)}</div>` : ''}
+            <div class="order-items">${escapeHtml(order.itemsDetail)}</div>
           </div>
           <div class="btn-group">
-            <button class="btn-print" onclick='printReceipt(${orderJson})'>🖨️ 列印</button>
+            <button class="btn-print" onclick="triggerPrint('${order.orderNo}')">🖨️ 列印</button>
             <button class="btn-finish" onclick="completeOrder(${order.rowIndex}, this)">✅ 完成</button>
           </div>
         </div>
@@ -220,11 +222,22 @@
     grid.innerHTML = html;
   }
 
-  // 🌟 列印函數：指定細明體 (PMingLiU)、放大時間與顧客資訊
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  function triggerPrint(orderNo) {
+    const order = cachedOrders.find(o => String(o.orderNo) === String(orderNo));
+    if (order) {
+      printReceipt(order);
+    } else {
+      alert("找不到該筆訂單資料！");
+    }
+  }
+
   function printReceipt(order) {
     const printArea = document.getElementById('printArea');
-    
-    // 確保時間顯示包含完整的日期與時間
     const fullTime = order.fullTime || order.time;
 
     printArea.innerHTML = `
@@ -233,13 +246,13 @@
         <div style="text-align:center; font-size: 54px; font-weight: bold; margin: 4px 0; line-height: 1;">#${order.orderNo}</div>
         
         <div style="font-size: 22px; margin-top: 10px; line-height: 1.3;">下單時間：${fullTime}</div>
-        <div style="font-size: 22px; margin-top: 4px; line-height: 1.3;">顧客：${order.name} (${order.phone})</div>
+        <div style="font-size: 22px; margin-top: 4px; line-height: 1.3;">顧客：${escapeHtml(order.name)} (${order.phone})</div>
         
         <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
         
-        ${order.remark ? `<div style="font-size: 24px; font-weight: bold;">備註：${order.remark}</div><div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>` : ''}
+        ${order.remark ? `<div style="font-size: 24px; font-weight: bold;">備註：${escapeHtml(order.remark)}</div><div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>` : ''}
         
-        <div style="font-size: 26px; line-height: 1.4; white-space: pre-line; word-break: break-all;">${order.itemsDetail}</div>
+        <div style="font-size: 26px; line-height: 1.4; white-space: pre-line; word-break: break-all;">${escapeHtml(order.itemsDetail)}</div>
         
         <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
         
@@ -248,7 +261,6 @@
       </div>
     `;
 
-    // 觸發原生列印
     window.print();
   }
 
@@ -259,17 +271,32 @@
 
     fetch(GAS_WEB_APP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'updateOrderStatus', rowIndex: rowIndex, status: '已完成' })
     })
     .then(res => res.json())
     .then(res => {
-      if (res.success) fetchOrders();
+      if (res.success) {
+        fetchOrders();
+      } else {
+        alert('出餐更新失敗：' + (res.error || '請重試'));
+        btnEl.disabled = false;
+        btnEl.innerText = '✅ 完成';
+      }
+    })
+    .catch(err => {
+      console.error("Complete Order Error:", err);
+      alert('連線失敗，請稍後再試！');
+      btnEl.disabled = false;
+      btnEl.innerText = '✅ 完成';
     });
   }
 
+  // 初始化與輪詢
   fetchOrders();
   setInterval(fetchOrders, 10000);
+
+  // 點擊頁面任意位置解鎖瀏覽器音效播放限制
   document.body.addEventListener('click', () => {
     const audio = document.getElementById('audioNotice');
     if (audio) { audio.load(); }
