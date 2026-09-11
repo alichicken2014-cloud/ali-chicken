@@ -29,6 +29,7 @@
       font-size: 15px; font-weight: bold;
       display: none; border-radius: 8px; margin: 15px;
       box-shadow: 0 2px 6px rgba(231,76,60,0.3);
+      white-space: pre-wrap;
     }
 
     .container { padding: 15px; max-width: 600px; margin: 0 auto; }
@@ -88,7 +89,7 @@
 
     .item-custom-options {
       display: none;
-      margin-top: 12px; padding-top: 10px;
+      margin-top: 12px;
       border-top: 1px dashed #eee; background: #fffdf9;
       border-radius: 8px; padding: 10px;
     }
@@ -138,7 +139,7 @@
     <input type="tel" id="custPhone" placeholder="請輸入電話號碼">
   </div>
 
-  <!-- 🌶️ 全單預設調味 (已移除微辣) -->
+  <!-- 🌶️ 全單預設調味 -->
   <div class="form-group">
     <label>🧂 整包炸物預設辣度 / 胡椒</label>
     <div class="option-group">
@@ -182,7 +183,7 @@
 
 <script>
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
-  const MY_LIFF_ID = "YOUR_LIFF_ID"; 
+  const MY_LIFF_ID = "YOUR_LIFF_ID"; // 如果您有 LIFF ID，請替換此處
 
   let userLineUid = "";
   let menuData = [];
@@ -190,12 +191,14 @@
   let currentCategory = "全部";
 
   function initLiff() {
-    if (MY_LIFF_ID && MY_LIFF_ID !== "YOUR_LIFF_ID") {
+    if (MY_LIFF_ID && MY_LIFF_ID !== "YOUR_LIFF_ID" && typeof liff !== "undefined") {
       liff.init({ liffId: MY_LIFF_ID }).then(() => {
         if (liff.isLoggedIn()) {
           liff.getProfile().then(p => { userLineUid = p.userId; });
-        } else { liff.login(); }
-      }).catch(err => console.error(err));
+        } else {
+          liff.login();
+        }
+      }).catch(err => console.error("LIFF 初始化失敗:", err));
     }
   }
 
@@ -208,11 +211,12 @@
           buildCategoryTabs();
           renderFilteredMenu();
         } else {
-          document.getElementById('menuContainer').innerHTML = '<div style="text-align:center;color:red;padding:20px;">載入菜單失敗，請刷頁重試</div>';
+          document.getElementById('menuContainer').innerHTML = '<div style="text-align:center;color:red;padding:20px;">載入菜單失敗，請重新整理</div>';
         }
       })
-      .catch(() => {
-        document.getElementById('menuContainer').innerHTML = '<div style="text-align:center;color:red;padding:20px;">網路連線失敗</div>';
+      .catch(err => {
+        console.error("Fetch Menu Error:", err);
+        document.getElementById('menuContainer').innerHTML = '<div style="text-align:center;color:red;padding:20px;">網路連線失敗，請檢查網路</div>';
       });
   }
 
@@ -237,11 +241,19 @@
   function switchCategory(catName, btnEl) {
     currentCategory = catName;
     document.querySelectorAll('.cat-tab-btn').forEach(btn => btn.classList.remove('active'));
-    btnEl.classList.add('active');
+    if (btnEl) btnEl.classList.add('active');
     renderFilteredMenu();
   }
 
   function handleFilterChange() {
+    const searchText = document.getElementById('searchInput').value.trim();
+    if (searchText !== "") {
+      // 搜尋時切換回「全部」頁籤，確保符合搜尋條件的餐點能全部顯示
+      currentCategory = "全部";
+      document.querySelectorAll('.cat-tab-btn').forEach((btn, index) => {
+        btn.classList.toggle('active', index === 0);
+      });
+    }
     renderFilteredMenu();
   }
 
@@ -306,7 +318,6 @@
     }
   }
 
-  // 雞排選項 (已移除微辣)
   function renderCustomOptionsHTML(idx, name) {
     if (name.includes("雞排")) {
       return `
@@ -354,11 +365,7 @@
     const customDiv = document.getElementById(`custom-${index}`);
     
     if (customDiv && (item.name.includes("雞排") || item.name.includes("薯條"))) {
-      if (cart[index] > 0) {
-        customDiv.style.display = "block";
-      } else {
-        customDiv.style.display = "none";
-      }
+      customDiv.style.display = cart[index] > 0 ? "block" : "none";
     }
 
     calculateTotal();
@@ -391,7 +398,7 @@
           notice.style.display = "none";
         }
       })
-      .catch(err => console.error(err));
+      .catch(err => console.error("Check Status Error:", err));
   }
 
   function submitOrder() {
@@ -409,8 +416,11 @@
       return;
     }
 
-    const globalSpice = document.querySelector('input[name="globalSpice"]:checked').value;
-    const globalBasil = document.querySelector('input[name="globalBasil"]:checked').value;
+    const globalSpiceEl = document.querySelector('input[name="globalSpice"]:checked');
+    const globalBasilEl = document.querySelector('input[name="globalBasil"]:checked');
+    
+    const globalSpice = globalSpiceEl ? globalSpiceEl.value : "胡椒";
+    const globalBasil = globalBasilEl ? globalBasilEl.value : "要九層塔";
 
     let itemsArr = [`【全單需求】${globalSpice}、${globalBasil}`];
 
@@ -453,9 +463,10 @@
       lineUid: userLineUid
     };
 
+    // 修正 POST 發送機制，避免跨網域 Header 引發 302 CORS 錯誤
     fetch(GAS_WEB_APP_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify(payload)
     })
     .then(res => res.json())
@@ -474,6 +485,7 @@
       }
     })
     .catch(err => {
+      console.error("Submit Order Error:", err);
       alert("連線失敗，請稍後再試！");
       submitBtn.disabled = false;
       submitBtn.innerText = "確認下單";
@@ -481,8 +493,8 @@
   }
 
   window.onload = function() {
-    fetchMenuData();
     initLiff();
+    fetchMenuData();
     checkStoreStatus();
   };
 </script>
