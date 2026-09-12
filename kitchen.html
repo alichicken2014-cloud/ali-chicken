@@ -3,311 +3,213 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>阿力香雞排 - 廚房即時出餐看板</title>
+  <title>阿力香雞排 - 廚房出單看板</title>
   <style>
     * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #121212;
-      color: #ffffff;
-      margin: 0; padding: 15px;
-    }
-    .header {
-      display: flex; justify-content: space-between; align-items: center;
-      background: #1e1e1e; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-    .header h1 { margin: 0; font-size: 24px; color: #f39c12; }
-    .status-info { display: flex; align-items: center; gap: 12px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; }
+    .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .header h2 { margin: 0; font-size: 22px; color: #333; }
+    .status-btn { padding: 10px 18px; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+    .open { background-color: #28a745; color: white; }
+    .closed { background-color: #dc3545; color: white; }
     
-    .btn-toggle-store {
-      border: none; padding: 10px 16px; border-radius: 8px; font-size: 16px;
-      font-weight: bold; cursor: pointer; color: white; transition: 0.2s;
-    }
-    .btn-open { background: #27ae60; }
-    .btn-close { background: #e74c3c; }
-
-    .refresh-btn {
-      background: #34495e; color: white; border: none; padding: 10px 14px;
-      border-radius: 8px; font-size: 15px; cursor: pointer;
-    }
-
-    .grid-container {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;
-    }
-    .order-card {
-      background: #242424; border: 2px solid #3d3d3d; border-radius: 12px; padding: 15px;
-      display: flex; flex-direction: column; justify-content: space-between;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    }
-    .order-header {
-      display: flex; justify-content: space-between; align-items: center;
-      border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px;
-    }
-    .order-no { font-size: 32px; font-weight: 900; color: #f1c40f; }
-    .order-time { font-size: 14px; color: #bbb; background: #333; padding: 4px 8px; border-radius: 6px; }
-    .order-cust { font-size: 16px; color: #eee; margin-bottom: 8px; font-weight: bold; }
-    .order-items {
-      font-size: 17px; line-height: 1.6; white-space: pre-line; background: #181818;
-      padding: 12px; border-radius: 8px; color: #fff; margin-bottom: 12px; flex-grow: 1;
-      border-left: 4px solid #f39c12;
-    }
-    .order-remark { background: #c0392b; color: white; padding: 8px 12px; border-radius: 6px; font-size: 15px; margin-bottom: 12px; font-weight: bold; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+    .card { background: white; border-radius: 8px; border-top: 6px solid #007bff; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: space-between; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; font-size: 22px; font-weight: bold; color: #111; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; margin-bottom: 10px; }
+    .card-header .time { font-size: 14px; color: #666; font-weight: normal; }
+    .card-body { font-size: 16px; color: #444; line-height: 1.5; margin-bottom: 15px; white-space: pre-line; }
+    .card-body strong { color: #000; }
+    .card-footer { display: flex; gap: 8px; }
     
-    .print-badge {
-      font-size: 13px; padding: 3px 8px; border-radius: 4px; font-weight: bold; margin-left: 8px;
-    }
-    .badge-printed { background: #27ae60; color: white; }
-    .badge-unprinted { background: #e67e22; color: white; }
-
-    .btn-group { display: flex; gap: 10px; }
-    .btn-print { background: #2980b9; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; }
-    .btn-finish { background: #27ae60; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 2; font-size: 17px; }
+    .btn { flex: 1; padding: 10px 0; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: bold; }
+    .btn-print { background: #ffc107; color: #212529; }
+    .btn-done { background: #28a745; color: white; }
+    .btn:active { opacity: 0.8; }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>🍳 阿力香雞排 - 廚房看板</h1>
-  <div class="status-info">
-    <button id="toggleStoreBtn" class="btn-toggle-store btn-open" onclick="toggleStoreStatus()">🟢 營業中 (點擊公休)</button>
-    <button class="refresh-btn" onclick="fetchOrders()">🔄 重新整理</button>
+  <h2>阿力香雞排 - 廚房看板</h2>
+  <div>
+    <button id="toggle-status-btn" class="status-btn open" onclick="toggleStatus()">載入中...</button>
   </div>
 </div>
 
-<div class="grid-container" id="ordersGrid">
-  <div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 50px; font-size: 20px;">
-    正在讀取即時訂單...
-  </div>
+<div class="card-grid" id="orders-container">
+  <!-- 動態渲染訂單卡片 -->
 </div>
-
-<audio id="audioNotice" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4VN5yr5ZKfD0ko08e3IE7rJLcf1HjSzzWOnxEOKY8DXcO2qeaiSQfCtDj165XhMKgjw/exec";
-
-  let knownOrderNos = new Set();
-  let printedOrderNos = new Set(); // 記錄已自動列印的單號
-  let isFirstLoad = true;
-  let currentIsOpen = true;
-  let cachedOrders = [];
+  // 🌟 請替換為您部署 Apps Script 後取得的 Web App URL
+  const GAS_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec"; 
   
-  // 自動列印佇列
+  let knownOrderNos = new Set();
+  let currentIsOpen = true;
+  
+  // 隊列控制變數
   let printQueue = [];
   let isPrinting = false;
 
-  function fetchOrders() {
-    fetch(GAS_WEB_APP_URL + "?action=getKitchenData")
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          updateStoreBtn(data.isOpen);
-
-          let newOrdersToPrint = [];
-
-          if (data.orders) {
-            cachedOrders = data.orders;
-            data.orders.forEach(order => {
-              if (!knownOrderNos.has(order.orderNo)) {
-                knownOrderNos.add(order.orderNo);
-                
-                // 只有「非第一次載入」的【新訂單】才加入自動列印佇列
-                if (!isFirstLoad) {
-                  newOrdersToPrint.push(order);
-                }
-              }
-            });
-
-            renderOrders(data.orders);
-
-            if (!isFirstLoad && newOrdersToPrint.length > 0) {
-              playAlertSound();
-              // 將新訂單推入列印佇列，確保忙碌時一單接一單吐紙，不覆蓋！
-              newOrdersToPrint.forEach(order => printQueue.push(order));
-              processPrintQueue();
-            }
-          }
-          isFirstLoad = false;
-        }
-      })
-      .catch(err => console.error("Fetch Orders Error:", err));
+  // 1. 語音播報功能
+  function speakAlert(text) {
+    if ('speechSynthesis' in window) {
+      const synth = window.speechSynthesis;
+      const utterThis = new SpeechSynthesisUtterance(text);
+      utterThis.lang = 'zh-TW';
+      synth.speak(utterThis);
+    }
   }
 
-  // 處理列印佇列：逐筆送給 RawBT
-  function processPrintQueue() {
+  // 2. RawBT 靜默列印文字傳送
+  function sendToRawBT(order) {
+    // 組合熱感應出貨單文字格式
+    const textToPrint = 
+`==============================
+【阿力香雞排 - 出貨單】
+單號：#${order.orderNo}
+時間：${order.orderTime}
+姓名：${order.name}
+電話：${order.phone}
+------------------------------
+餐點明細：
+${order.itemsDetail}
+------------------------------
+備註：${order.remark || '無'}
+金額：$${order.totalPrice} 元
+==============================
+
+
+`; // 尾端空行方便出單機切紙/留白
+
+    // 將內容編碼成 Base64 並透過 RawBT 協議發送
+    const rawbtUrl = "rawbt:base64," + btoa(unescape(encodeURIComponent(textToPrint)));
+    
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = rawbtUrl;
+    document.body.appendChild(iframe);
+    
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 1500);
+  }
+
+  // 3. 列印隊列處理 (避免連續進單時藍牙傳輸衝突)
+  function queuePrint(order) {
+    printQueue.push(order);
+    processQueue();
+  }
+
+  function processQueue() {
     if (isPrinting || printQueue.length === 0) return;
 
     isPrinting = true;
     const order = printQueue.shift();
 
     sendToRawBT(order);
-    printedOrderNos.add(order.orderNo);
-    renderOrders(cachedOrders); // 更新 UI 顯示【已印】狀態
 
-    // 留 1.5 秒間隔給 RawBT 出紙，隨後印下一單
+    // 預留 2.5 秒緩衝時間，等 mrboss 印完後再處理下一張
     setTimeout(() => {
       isPrinting = false;
-      processPrintQueue();
-    }, 1500);
+      processQueue();
+    }, 2500);
   }
 
-  // 核心：透過 RawBT Intent 協定傳送文字給熱感應出單機
-  function sendToRawBT(order) {
-    const fullTime = order.fullTime || order.time;
-    
-    // 組裝小白單純文字格式
-    let text = `==============================\n`;
-    text += `         阿力香雞排           \n`;
-    text += `          #${order.orderNo}   \n`;
-    text += `==============================\n`;
-    text += `時間：${fullTime}\n`;
-    text += `顧客：${order.name} (${order.phone})\n`;
-    text += `------------------------------\n`;
-    if (order.remark) {
-      text += `【備註】：${order.remark}\n`;
-      text += `------------------------------\n`;
-    }
-    text += `${order.itemsDetail}\n`;
-    text += `------------------------------\n`;
-    text += `總金額：$${order.totalPrice}\n`;
-    text += `==============================\n\n\n`;
-
-    // 使用 RawBT Intent 直接發送，不跳瀏覽器預覽
-    const rawbtUrl = "intent:" + encodeURIComponent(text) + "#URI;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
-    
-    // 透過隱藏連線觸發 RawBT
-    window.location.href = rawbtUrl;
-  }
-
-  function triggerPrint(orderNo) {
-    const order = cachedOrders.find(o => String(o.orderNo) === String(orderNo));
-    if (order) {
-      sendToRawBT(order);
-      printedOrderNos.add(order.orderNo);
-      renderOrders(cachedOrders);
-    } else {
-      alert("找不到該筆訂單！");
+  // 4. 從 Google Apps Script 獲取廚房最新訂單
+  async function fetchOrders() {
+    try {
+      const res = await fetch(`${GAS_URL}?action=getKitchenOrders`);
+      const data = await res.json();
+      
+      if (data.success) {
+        updateStatusUI(data.isOpen);
+        renderOrders(data.orders);
+      }
+    } catch (err) {
+      console.error("抓取訂單失敗", err);
     }
   }
 
+  // 5. 渲染廚房看板畫面
   function renderOrders(orders) {
-    const grid = document.getElementById('ordersGrid');
-    if (orders.length === 0) {
-      grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#888; padding:60px; font-size:22px;">🎉 目前沒有待製作訂單</div>';
-      return;
-    }
+    const container = document.getElementById("orders-container");
+    container.innerHTML = "";
 
-    let html = '';
     orders.forEach(order => {
-      const isPrinted = printedOrderNos.has(order.orderNo);
-      const badgeHtml = isPrinted 
-        ? `<span class="print-badge badge-printed">已出單</span>`
-        : `<span class="print-badge badge-unprinted">未出單</span>`;
+      // 判斷是否為新訂單 (新訂單進來時觸發語音與自動列印)
+      if (!knownOrderNos.has(order.orderNo)) {
+        knownOrderNos.add(order.orderNo);
+        speakAlert("你有新訂單");
+        queuePrint(order); // 加入自動列印隊列
+      }
 
-      html += `
-        <div class="order-card">
-          <div>
-            <div class="order-header">
-              <div>
-                <span class="order-no">#${order.orderNo}</span>
-                ${badgeHtml}
-              </div>
-              <span class="order-time">🕒 ${order.time}</span>
-            </div>
-            <div class="order-cust">👤 ${escapeHtml(order.name)} (${order.phone})</div>
-            ${order.remark ? `<div class="order-remark">📝 備註：${escapeHtml(order.remark)}</div>` : ''}
-            <div class="order-items">${escapeHtml(order.itemsDetail)}</div>
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div>
+          <div class="card-header">
+            <span>#${order.orderNo}</span>
+            <span class="time">${order.orderTime}</span>
           </div>
-          <div class="btn-group">
-            <button class="btn-print" onclick="triggerPrint('${order.orderNo}')">🖨️ 補印</button>
-            <button class="btn-finish" onclick="completeOrder(${order.rowIndex}, this)">✅ 完成</button>
+          <div class="card-body">
+            <strong>顧客：</strong>${order.name} (${order.phone})<br>
+            <strong>明細：</strong><br>${order.itemsDetail}<br>
+            <strong>備註：</strong>${order.remark || '無'}<br>
+            <strong>金額：</strong>$${order.totalPrice}
           </div>
         </div>
+        <div class="card-footer">
+          <button class="btn btn-print" onclick='queuePrint(${JSON.stringify(order)})'>補單列印</button>
+          <button class="btn btn-done" onclick="completeOrder(${order.row})">完成</button>
+        </div>
       `;
-    });
-    grid.innerHTML = html;
-  }
-
-  function toggleStoreStatus() {
-    const targetState = !currentIsOpen;
-    const actionText = targetState ? "開啟營業（允許顧客點餐）" : "臨時公休（暫停顧客點餐）";
-    if (!confirm(`確定要切換為【${actionText}】嗎？`)) return;
-
-    const btn = document.getElementById('toggleStoreBtn');
-    btn.disabled = true;
-    btn.innerText = "處理中...";
-
-    fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'toggleStoreStatus', isOpen: targetState })
-    })
-    .then(res => res.json())
-    .then(res => {
-      btn.disabled = false;
-      if (res.success) {
-        updateStoreBtn(res.isOpen);
-        alert(`已切換狀態為：${res.isOpen ? '🟢 營業中' : '🔴 臨時公休'}`);
-      } else {
-        alert('切換失敗：' + (res.error || '未知錯誤'));
-      }
-    })
-    .catch(err => {
-      btn.disabled = false;
-      alert('連線失敗，請重試');
+      container.appendChild(card);
     });
   }
 
-  function updateStoreBtn(isOpen) {
-    currentIsOpen = isOpen;
-    const btn = document.getElementById('toggleStoreBtn');
-    if (isOpen) {
-      btn.className = "btn-toggle-store btn-open";
-      btn.innerText = "🟢 營業中 (點擊公休)";
-    } else {
-      btn.className = "btn-toggle-store btn-close";
-      btn.innerText = "🔴 臨時公休中 (點擊營業)";
+  // 6. 點擊「完成」移除訂單並更新 Google Sheet 狀態
+  async function completeOrder(row) {
+    try {
+      await fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "updateOrderStatus", row: row, status: "已完成" })
+      });
+      fetchOrders();
+    } catch (err) {
+      alert("更新狀態失敗，請重試");
     }
   }
 
-  function playAlertSound() {
-    const audio = document.getElementById('audioNotice');
-    if (audio) { audio.play().catch(e => {}); }
+  // 7. 切換營業 / 臨時公休狀態
+  async function toggleStatus() {
+    const nextStatus = !currentIsOpen;
+    try {
+      await fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "toggleStatus", status: nextStatus })
+      });
+      fetchOrders();
+    } catch (err) {
+      alert("切換狀態失敗");
+    }
   }
 
-  function escapeHtml(text) {
-    if (!text) return '';
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  function updateStatusUI(isOpen) {
+    currentIsOpen = isOpen;
+    const btn = document.getElementById("toggle-status-btn");
+    if (isOpen) {
+      btn.className = "status-btn open";
+      btn.innerText = "營業中 (點擊改公休)";
+    } else {
+      btn.className = "status-btn closed";
+      btn.innerText = "臨時公休中 (點擊開啟)";
+    }
   }
 
-  function completeOrder(rowIndex, btnEl) {
-    if (!confirm('確定此單已製作完成？')) return;
-    btnEl.disabled = true;
-    btnEl.innerText = '處理中...';
-
-    fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'updateOrderStatus', rowIndex: rowIndex, status: '已完成' })
-    })
-    .then(res => res.json())
-    .then(res => {
-      if (res.success) fetchOrders();
-    })
-    .catch(() => {
-      alert('網路連線問題，請重試');
-      btnEl.disabled = false;
-      btnEl.innerText = '✅ 完成';
-    });
-  }
-
+  // 8. 輪詢機制：每 6 秒自動重新向試算表請求一次資料
+  setInterval(fetchOrders, 6000);
   fetchOrders();
-  setInterval(fetchOrders, 10000);
-
-  document.body.addEventListener('click', () => {
-    const audio = document.getElementById('audioNotice');
-    if (audio) { audio.load(); }
-  }, { once: true });
 </script>
 
 </body>
