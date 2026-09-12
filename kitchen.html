@@ -13,14 +13,17 @@
     .open { background-color: #28a745; color: white; }
     .closed { background-color: #dc3545; color: white; }
     
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-    .card { background: white; border-radius: 8px; border-top: 6px solid #007bff; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: space-between; }
-    .card-header { display: flex; justify-content: space-between; align-items: center; font-size: 22px; font-weight: bold; color: #111; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; margin-bottom: 10px; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+    .card { background: white; border-radius: 8px; border-top: 6px solid #d35400; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: space-between; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; font-size: 24px; font-weight: bold; color: #d35400; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; margin-bottom: 10px; }
     .card-header .time { font-size: 14px; color: #666; font-weight: normal; }
-    .card-body { font-size: 16px; color: #444; line-height: 1.5; margin-bottom: 15px; white-space: pre-line; }
+    .card-body { font-size: 15px; color: #444; line-height: 1.5; margin-bottom: 15px; }
     .card-body strong { color: #000; }
-    .card-footer { display: flex; gap: 8px; }
     
+    .flavor-box { background: #fff8e7; border: 1px solid #ffeaa7; padding: 8px 10px; border-radius: 6px; margin: 8px 0; font-size: 15px; color: #d35400; font-weight: bold; }
+    .items-box { background: #fafafa; border-left: 3px solid #f39c12; padding: 8px; margin: 8px 0; font-size: 15px; white-space: pre-line; }
+    
+    .card-footer { display: flex; gap: 8px; }
     .btn { flex: 1; padding: 10px 0; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: bold; }
     .btn-print { background: #ffc107; color: #212529; }
     .btn-done { background: #28a745; color: white; }
@@ -30,7 +33,7 @@
 <body>
 
 <div class="header">
-  <h2>阿力香雞排 - 廚房看板</h2>
+  <h2>🐥 阿力香雞排 - 廚房看板</h2>
   <div>
     <button id="toggle-status-btn" class="status-btn open" onclick="toggleStatus()">載入中...</button>
   </div>
@@ -41,61 +44,70 @@
 </div>
 
 <script>
-  // 🌟 請替換為您部署 Apps Script 後取得的 Web App URL
-  const GAS_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec"; 
+  // ⚙️ 最新部署的 GAS Web App URL
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec"; 
   
   let knownOrderNos = new Set();
   let currentIsOpen = true;
   
-  // 隊列控制變數
+  // 列印隊列控制
   let printQueue = [];
   let isPrinting = false;
 
   // 1. 語音播報功能
   function speakAlert(text) {
     if ('speechSynthesis' in window) {
-      const synth = window.speechSynthesis;
+      window.speechSynthesis.cancel(); // 停止先前的語音，避免積壓
       const utterThis = new SpeechSynthesisUtterance(text);
       utterThis.lang = 'zh-TW';
-      synth.speak(utterThis);
+      utterThis.rate = 1.1; // 稍微加速播報
+      window.speechSynthesis.speak(utterThis);
     }
   }
 
-  // 2. RawBT 靜默列印文字傳送
+  // 2. RawBT 靜默列印（安全非阻塞機制）
   function sendToRawBT(order) {
-    // 組合熱感應出貨單文字格式
-    const textToPrint = 
+    try {
+      const orderNoStr = order.orderId || order.orderNo || "無號碼";
+      const spiceStr = order.spice || "胡椒";
+      const prefStr = order.preference || "無";
+      const itemsStr = order.itemsDetail || order.items || "";
+      
+      // 組合熱感應紙列印內容
+      const textToPrint = 
 `==============================
 【阿力香雞排 - 出貨單】
-單號：#${order.orderNo}
-時間：${order.orderTime}
-姓名：${order.name}
-電話：${order.phone}
+取單號碼：${orderNoStr}
+下單時間：${order.orderTime || ''}
+訂 購 人：${order.name || ''}
+聯絡電話：${order.phone || ''}
+------------------------------
+🌶️ 整包辣度：${spiceStr}
+🌿 特殊偏好：${prefStr}
 ------------------------------
 餐點明細：
-${order.itemsDetail}
+${itemsStr}
 ------------------------------
-備註：${order.remark || '無'}
-金額：$${order.totalPrice} 元
+備註：${order.remark || order.note || '無'}
+金額：$${order.totalPrice || 0} 元
 ==============================
 
 
-`; // 尾端空行方便出單機切紙/留白
+`; // 底部留空白方便切紙
 
-    // 將內容編碼成 Base64 並透過 RawBT 協議發送
-    const rawbtUrl = "rawbt:base64," + btoa(unescape(encodeURIComponent(textToPrint)));
-    
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = rawbtUrl;
-    document.body.appendChild(iframe);
-    
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 1500);
+      const rawbtUrl = "rawbt:base64," + btoa(unescape(encodeURIComponent(textToPrint)));
+      
+      // 使用背景 window 開啟並立即關閉，避免卡紙/無紙導致網頁被 block
+      const printWin = window.open(rawbtUrl, '_self');
+      if (printWin) {
+        setTimeout(() => { printWin.close(); }, 300);
+      }
+    } catch (err) {
+      console.error("RawBT 派送失敗:", err);
+    }
   }
 
-  // 3. 列印隊列處理 (避免連續進單時藍牙傳輸衝突)
+  // 3. 列印隊列處理 (避免連續進單藍牙衝突)
   function queuePrint(order) {
     printQueue.push(order);
     processQueue();
@@ -109,11 +121,11 @@ ${order.itemsDetail}
 
     sendToRawBT(order);
 
-    // 預留 2.5 秒緩衝時間，等 mrboss 印完後再處理下一張
+    // 預留 3.5 秒印表機實體列印時間，隨後解鎖處理下一張
     setTimeout(() => {
       isPrinting = false;
       processQueue();
-    }, 2500);
+    }, 3500);
   }
 
   // 4. 從 Google Apps Script 獲取廚房最新訂單
@@ -122,12 +134,14 @@ ${order.itemsDetail}
       const res = await fetch(`${GAS_URL}?action=getKitchenOrders`);
       const data = await res.json();
       
-      if (data.success) {
+      if (data.isOpen !== undefined) {
         updateStatusUI(data.isOpen);
-        renderOrders(data.orders);
       }
+      
+      const orders = data.orders || (Array.isArray(data) ? data : []);
+      renderOrders(orders);
     } catch (err) {
-      console.error("抓取訂單失敗", err);
+      console.error("抓取訂單失敗:", err);
     }
   }
 
@@ -136,12 +150,19 @@ ${order.itemsDetail}
     const container = document.getElementById("orders-container");
     container.innerHTML = "";
 
+    if (orders.length === 0) {
+      container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:#888; padding: 50px 0; font-size:18px;">🎉 目前沒有待製作訂單</div>';
+      return;
+    }
+
     orders.forEach(order => {
-      // 判斷是否為新訂單 (新訂單進來時觸發語音與自動列印)
-      if (!knownOrderNos.has(order.orderNo)) {
-        knownOrderNos.add(order.orderNo);
+      const orderNo = order.orderId || order.orderNo;
+
+      // 判斷是否為新訂單 (新訂單觸發語音與自動列印)
+      if (orderNo && !knownOrderNos.has(orderNo)) {
+        knownOrderNos.add(orderNo);
         speakAlert("你有新訂單");
-        queuePrint(order); // 加入自動列印隊列
+        queuePrint(order);
       }
 
       const card = document.createElement("div");
@@ -149,19 +170,29 @@ ${order.itemsDetail}
       card.innerHTML = `
         <div>
           <div class="card-header">
-            <span>#${order.orderNo}</span>
-            <span class="time">${order.orderTime}</span>
+            <span>${orderNo}</span>
+            <span class="time">${order.orderTime || ''}</span>
           </div>
           <div class="card-body">
-            <strong>顧客：</strong>${order.name} (${order.phone})<br>
-            <strong>明細：</strong><br>${order.itemsDetail}<br>
-            <strong>備註：</strong>${order.remark || '無'}<br>
-            <strong>金額：</strong>$${order.totalPrice}
+            <div><strong>顧客：</strong>${order.name || '顧客'} (${order.phone || ''})</div>
+            
+            <div class="flavor-box">
+              🌶️ 整包辣度：${order.spice || '胡椒'}<br>
+              🌿 特殊偏好：${order.preference || '無'}
+            </div>
+
+            <div><strong>餐點明細：</strong></div>
+            <div class="items-box">${order.itemsDetail || order.items || ''}</div>
+            
+            <div><strong>備註：</strong>${order.remark || order.note || '無'}</div>
+            <div style="margin-top:5px; font-weight:bold; color:#e67e22; font-size:18px;">
+              <strong>總金額：</strong>$${order.totalPrice || 0}
+            </div>
           </div>
         </div>
         <div class="card-footer">
           <button class="btn btn-print" onclick='queuePrint(${JSON.stringify(order)})'>補單列印</button>
-          <button class="btn btn-done" onclick="completeOrder(${order.row})">完成</button>
+          <button class="btn btn-done" onclick="completeOrder(${order.row})">完成出單</button>
         </div>
       `;
       container.appendChild(card);
@@ -173,6 +204,7 @@ ${order.itemsDetail}
     try {
       await fetch(GAS_URL, {
         method: "POST",
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: "updateOrderStatus", row: row, status: "已完成" })
       });
       fetchOrders();
@@ -187,11 +219,12 @@ ${order.itemsDetail}
     try {
       await fetch(GAS_URL, {
         method: "POST",
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: "toggleStatus", status: nextStatus })
       });
       fetchOrders();
     } catch (err) {
-      alert("切換狀態失敗");
+      alert("切換營業狀態失敗");
     }
   }
 
@@ -200,14 +233,14 @@ ${order.itemsDetail}
     const btn = document.getElementById("toggle-status-btn");
     if (isOpen) {
       btn.className = "status-btn open";
-      btn.innerText = "營業中 (點擊改公休)";
+      btn.innerText = "🟢 營業中 (點擊改公休)";
     } else {
       btn.className = "status-btn closed";
-      btn.innerText = "臨時公休中 (點擊開啟)";
+      btn.innerText = "🔴 臨時公休中 (點擊開啟)";
     }
   }
 
-  // 8. 輪詢機制：每 6 秒自動重新向試算表請求一次資料
+  // 8. 輪詢機制：每 6 秒自動更新一次看板
   setInterval(fetchOrders, 6000);
   fetchOrders();
 </script>
