@@ -34,7 +34,7 @@
     .btn-print { background: #ffc107; color: #212529; }
     .btn-done { background: #28a745; color: white; }
     
-    /* 隱藏的列印畫布：專門渲染要列印的小票模板 (加大字體調整版) */
+    /* 隱藏的列印畫布：專門渲染要列印的小票模板 */
     #print-ticket-template {
       position: absolute; left: -9999px; top: -9999px;
       width: 384px; /* 58mm 熱感應紙標準寬度 */
@@ -48,10 +48,10 @@
     .ticket-num { text-align: center; font-size: 42px; font-weight: 900; border-top: 3px dashed #000; border-bottom: 3px dashed #000; padding: 5px 0; margin: 5px 0; }
     .ticket-info { font-size: 20px; font-weight: bold; margin: 4px 0; }
     
-    /* 中間調味區段：字體放大至 32px */
+    /* 中間調味區段 */
     .ticket-highlight { border: 3px solid #000; padding: 8px; margin: 10px 0; font-size: 32px; font-weight: 900; background-color: #ffffff; line-height: 1.3; }
     
-    /* 中間餐點內容標題與明細：字體放大至 34px */
+    /* 中間餐點內容標題與明細 */
     .ticket-items-title { font-size: 24px; font-weight: 900; margin-top: 10px; text-decoration: underline; }
     .ticket-items { font-size: 34px; font-weight: 900; line-height: 1.4; margin: 8px 0; white-space: pre-line; word-break: break-all; }
     
@@ -100,6 +100,28 @@
   let printQueue = [];
   let isPrinting = false;
   let printCharacteristic = null;
+
+  // 🛠️ 電話號碼格式化函式 (自動轉為 0000-000-000 格式)
+  function formatPhone(phone) {
+    if (!phone) return '';
+    let cleaned = ('' + phone).replace(/\D/g, ''); // 去除非數字字元
+    
+    // 如果是國際開頭 886，自動轉成 0
+    if (cleaned.startsWith('886')) {
+      cleaned = '0' + cleaned.substring(3);
+    }
+    // 如果輸入沒有補 0 (例如 917522271)，自動補 0 變成 0917522271
+    if (cleaned.length === 9 && !cleaned.startsWith('0')) {
+      cleaned = '0' + cleaned;
+    }
+
+    // 格式化為 0000-000-000
+    if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{4})(\d{3})(\d{3})/, '$1-$2-$3');
+    }
+    
+    return phone; // 不符合長度時保留原樣
+  }
 
   // 1. Web Bluetooth 藍牙連線功能
   async function connectBluetooth() {
@@ -195,10 +217,12 @@
   // 4. 列印處理核心
   async function sendToRawBTGraphic(order) {
     try {
+      const formattedPhone = formatPhone(order.phone);
+      
       document.getElementById('p-order-id').innerText = "取單號碼：" + (order.orderId || order.orderNo || '#--');
       document.getElementById('p-time').innerText = "時間：" + (order.orderTime || '');
       document.getElementById('p-name').innerText = "👤 訂購人：" + (order.name || '');
-      document.getElementById('p-phone').innerText = "📞 電 話：" + (order.phone || '');
+      document.getElementById('p-phone').innerText = "📞 電 話：" + formattedPhone;
       document.getElementById('p-spice').innerText = order.spice || '胡椒';
       
       const pref = order.preference || '無';
@@ -272,6 +296,7 @@
 
     orders.forEach(order => {
       const orderNo = order.orderId || order.orderNo;
+      const formattedPhone = formatPhone(order.phone);
 
       if (orderNo && !knownOrderNos.has(orderNo)) {
         knownOrderNos.add(orderNo);
@@ -288,7 +313,7 @@
             <span class="time">${order.orderTime || ''}</span>
           </div>
           <div class="card-body">
-            <div><strong>顧客：</strong>${order.name || '顧客'} (${order.phone || ''})</div>
+            <div><strong>顧客：</strong>${order.name || '顧客'} (${formattedPhone})</div>
             
             <div class="flavor-box">
               🌶️ 整包調味：${order.spice || '胡椒'}<br>
