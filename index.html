@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>阿力香雞排-崑山店</title>
+  <!-- LINE LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     :root {
@@ -242,7 +243,8 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwmW6zrV40Qsyz5fBVqELlZBG48hwvt2mvZNWQd0mITEh2fcgaaDzd9ZsjqgshAzxbVwg/exec";
+  // ⚙️ 請確認此處 GAS URL 為您最新部署的 Apps Script 網頁應用程式網址
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyoP4rUniPRstsk70JsEiG1k7_h6RI3VrqWvQraDaqMAjL_19l_ugFCNOqoWbVzRXeQOg/exec";
   const MY_LIFF_ID = "2011276802-mdrsLFND";
   const MY_LIFF_URL = "https://liff.line.me/" + MY_LIFF_ID;
 
@@ -270,14 +272,27 @@
             if (nameInput && !nameInput.value) {
               nameInput.value = profile.displayName || '';
             }
-          }).catch(err => console.log('Profile 取得失敗:', err));
+            // 登入驗證成功後載入菜單
+            loadMenuData();
+          }).catch(err => {
+            console.log('Profile 取得失敗:', err);
+            loadMenuData();
+          });
+        } else {
+          liff.login();
         }
       }).catch(err => {
+        console.error('LIFF 初始化失敗:', err);
         alert('⚠️ 請從【阿力香雞排 官方LINE】點選連結進行點餐！');
         window.location.href = MY_LIFF_URL;
       });
+    } else {
+      // 供開發測試（非 LIFF 環境）
+      loadMenuData();
     }
+  };
 
+  function loadMenuData() {
     fetch(GAS_WEB_APP_URL)
       .then(res => res.json())
       .then(resData => {
@@ -311,9 +326,9 @@
       })
       .catch(err => {
         console.error("菜單載入失敗:", err);
-        document.getElementById('gridMenu').innerText = "菜單載入失敗，請確認 GAS 後端設定。";
+        document.getElementById('gridMenu').innerText = "菜單載入失敗，請確認 GAS 後端部署設定。";
       });
-  };
+  }
 
   function selectSingleOpt(el) {
     document.querySelectorAll('#mainFlavorGroup .opt-btn').forEach(b => b.classList.remove('active'));
@@ -553,6 +568,7 @@
     })
     .catch(err => {
       alert('連線失敗，請稍後再試。');
+      console.error(err);
       submitBtn.disabled = false;
       submitBtn.innerText = '💛 確認送出訂單 💛';
     });
