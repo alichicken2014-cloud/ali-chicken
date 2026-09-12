@@ -34,23 +34,28 @@
     .btn-print { background: #ffc107; color: #212529; }
     .btn-done { background: #28a745; color: white; }
     
-    /* 隱藏的列印畫布：專門渲染要列印的小票模板 */
+    /* 隱藏的列印畫布：專門渲染要列印的小票模板 (加大字體調整版) */
     #print-ticket-template {
       position: absolute; left: -9999px; top: -9999px;
       width: 384px; /* 58mm 熱感應紙標準寬度 */
       background: #ffffff;
       color: #000000;
       font-family: "MingLiU", "PMingLiU", "新細明體", serif;
-      padding: 10px;
+      padding: 5px;
       box-sizing: border-box;
     }
-    .ticket-title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 5px; }
-    .ticket-num { text-align: center; font-size: 34px; font-weight: 900; border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 5px 0; margin: 5px 0; }
-    .ticket-info { font-size: 16px; font-weight: bold; margin: 3px 0; }
-    .ticket-highlight { border: 2px solid #000; padding: 6px; margin: 8px 0; font-size: 19px; font-weight: 900; background-color: #f0f0f0; }
-    .ticket-items-title { font-size: 18px; font-weight: bold; margin-top: 10px; text-decoration: underline; }
-    .ticket-items { font-size: 18px; font-weight: bold; line-height: 1.4; margin: 5px 0; white-space: pre-line; }
-    .ticket-divider { border-top: 1px dashed #000; margin: 8px 0; }
+    .ticket-title { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 5px; }
+    .ticket-num { text-align: center; font-size: 42px; font-weight: 900; border-top: 3px dashed #000; border-bottom: 3px dashed #000; padding: 5px 0; margin: 5px 0; }
+    .ticket-info { font-size: 20px; font-weight: bold; margin: 4px 0; }
+    
+    /* 中間調味區段：字體放大至 32px */
+    .ticket-highlight { border: 3px solid #000; padding: 8px; margin: 10px 0; font-size: 32px; font-weight: 900; background-color: #ffffff; line-height: 1.3; }
+    
+    /* 中間餐點內容標題與明細：字體放大至 34px */
+    .ticket-items-title { font-size: 24px; font-weight: 900; margin-top: 10px; text-decoration: underline; }
+    .ticket-items { font-size: 34px; font-weight: 900; line-height: 1.4; margin: 8px 0; white-space: pre-line; word-break: break-all; }
+    
+    .ticket-divider { border-top: 2px dashed #000; margin: 10px 0; }
   </style>
 </head>
 <body>
@@ -83,8 +88,8 @@
   <div class="ticket-items" id="p-items"></div>
   
   <div class="ticket-divider"></div>
-  <div class="ticket-info" id="p-note">📝 訂單備註：無</div>
-  <div class="ticket-info" style="font-size:22px; font-weight:900; text-align:right; margin-top:5px;" id="p-total">💰 總金額：$0</div>
+  <div class="ticket-info" style="font-size: 24px;" id="p-note">📝 訂單備註：無</div>
+  <div class="ticket-info" style="font-size: 26px; font-weight: 900; text-align: right; margin-top: 8px;" id="p-total">💰 總金額：$0</div>
 </div>
 
 <script>
@@ -94,14 +99,14 @@
   let currentIsOpen = true;
   let printQueue = [];
   let isPrinting = false;
-  let printCharacteristic = null; // 藍牙特徵值
+  let printCharacteristic = null;
 
   // 1. Web Bluetooth 藍牙連線功能
   async function connectBluetooth() {
     try {
       const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
-        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', 4953] // 常見熱感應印表機藍牙服務
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', 4953]
       });
 
       const server = await device.gatt.connect();
@@ -142,7 +147,7 @@
     }
   }
 
-  // 3. 將 Canvas 圖片轉換為 ESC/POS Raster 指令流並發送到藍牙
+  // 3. 將 Canvas 圖片轉換為 ESC/POS Raster 指令流發送到藍牙
   async function sendToBluetoothPrinter(canvas) {
     if (!printCharacteristic) {
       console.warn("藍牙未連線，跳過自動列印");
@@ -154,10 +159,8 @@
     const height = canvas.height;
     const imgData = ctx.getImageData(0, 0, width, height);
     
-    // ESC/POS 初始化指令
-    let bytes = [0x1B, 0x40]; 
+    let bytes = [0x1B, 0x40]; // 初始化
 
-    // 將二值化圖片點陣轉換為 ESC/POS Raster 位元數據
     const widthBytes = Math.ceil(width / 8);
     bytes.push(0x1D, 0x76, 0x30, 0, widthBytes % 256, Math.floor(widthBytes / 256), height % 256, Math.floor(height / 256));
 
@@ -168,7 +171,6 @@
           const pixelX = x * 8 + b;
           if (pixelX < width) {
             const idx = (y * width + pixelX) * 4;
-            // 算灰階度，小於 128視為黑點
             const avg = (imgData.data[idx] + imgData.data[idx + 1] + imgData.data[idx + 2]) / 3;
             if (avg < 128) {
               byteVal |= (1 << (7 - b));
@@ -179,10 +181,9 @@
       }
     }
 
-    // 切紙與走紙指令 (進紙 3 行)
+    // 進紙切紙
     bytes.push(0x1B, 0x64, 0x03);
 
-    // 分段發送給藍牙 (防止藍牙 Buffer 溢位)
     const chunkSize = 100;
     const dataUint8 = new Uint8Array(bytes);
     for (let i = 0; i < dataUint8.length; i += chunkSize) {
@@ -210,7 +211,7 @@
       const ticketElem = document.getElementById('print-ticket-template');
 
       const canvas = await html2canvas(ticketElem, {
-        scale: 1, // 採用 1:1 像素尺寸
+        scale: 1,
         width: 384,
         backgroundColor: "#ffffff"
       });
