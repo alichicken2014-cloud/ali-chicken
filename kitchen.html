@@ -104,10 +104,10 @@
     }
   }
 
-  // 2. 將 HTML 轉為圖片並傳送給 RawBT (修正 RawBT 圖片模式)
+  // 替代方案：改用系統內建原生列印（完全免費）
   async function sendToRawBTGraphic(order) {
     try {
-      // 填入資料到隱藏小票模板
+      // 1. 填入資料到隱藏小票模板
       document.getElementById('p-order-id').innerText = "取單號碼：" + (order.orderId || order.orderNo || '#--');
       document.getElementById('p-time').innerText = "時間：" + (order.orderTime || '');
       document.getElementById('p-name').innerText = "👤 訂購人：" + (order.name || '');
@@ -123,26 +123,33 @@
 
       const ticketElem = document.getElementById('print-ticket-template');
 
-      // 使用 html2canvas 將 DOM 轉成 PNG 圖片 Canvas
+      // 2. 轉成圖片 Canvas
       const canvas = await html2canvas(ticketElem, {
-        scale: 2, // 提高解析度使字體邊緣清晰
+        scale: 2,
         backgroundColor: "#ffffff"
       });
 
-      // 1. 取得 DataURL
-      const imgDataUrl = canvas.toDataURL("image/png");
-
-      // 2. 構建 Android Intent 呼叫 RawBT 印出圖片 (指定傳送資料類型為 image/png)
-      const base64Data = imgDataUrl.replace(/^data:image\/png;base64,/, "");
-      
-      // 使用 RawBT 官方 Android Intent URL 語法指定為圖片
-      const intentUrl = "intent:base64," + base64Data + "#Intent;scheme=rawbt;type=image/png;package=ru.a402d.rawbtprinter;end;";
-
-      // 3. 觸發 RawBT
-      window.location.href = intentUrl;
+      // 3. 建立彈出視窗並觸發系統列印
+      const imgUrl = canvas.toDataURL("image/png");
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>列印單據</title>
+            <style>
+              body { margin: 0; display: flex; justify-content: center; align-items: flex-start; }
+              img { width: 100%; max-width: 384px; }
+            </style>
+          </head>
+          <body>
+            <img src="${imgUrl}" onload="window.print(); window.close();" />
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
 
     } catch (err) {
-      console.error("圖形化列印失敗:", err);
+      console.error("列印失敗:", err);
     }
   }
 
