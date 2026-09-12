@@ -244,7 +244,7 @@
 
 <script>
   // ⚙️ 請確認此處 GAS URL 為您最新部署的 Apps Script 網頁應用程式網址
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyoP4rUniPRstsk70JsEiG1k7_h6RI3VrqWvQraDaqMAjL_19l_ugFCNOqoWbVzRXeQOg/exec";
   const MY_LIFF_ID = "2011276802-mdrsLFND";
   const MY_LIFF_URL = "https://liff.line.me/" + MY_LIFF_ID;
 
@@ -378,7 +378,7 @@
       if (currentCategory !== '全部' && itemGroup.category !== currentCategory) continue;
 
       const minPrice = Math.min(...itemGroup.portions.map(p => Number(p.price) || 0));
-      const count = cart.filter(c => c.name === name).reduce((sum, c) => sum + c.qty, 0);
+      const count = cart.filter(c => c.name === name).reduce((sum, c) => sum + (c.quantity || c.qty), 0);
 
       html += `
         <div class="grid-card" onclick="openModal('${name}')">
@@ -450,15 +450,16 @@
 
     const note = notes.join(' / ');
 
-    cart.push({ name: currentItemName, portion: portion, price: price, qty: currentQty, note: note });
+    // 格式化統一使用 quantity / qty
+    cart.push({ name: currentItemName, portion: portion, price: price, quantity: currentQty, qty: currentQty, note: note });
     closeModal('itemModal');
     renderGrid();
     calculateTotal();
   }
 
   function calculateTotal() {
-    let total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-    let totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+    let total = cart.reduce((sum, item) => sum + (item.price * (item.quantity || item.qty)), 0);
+    let totalQty = cart.reduce((sum, item) => sum + (item.quantity || item.qty), 0);
     
     document.getElementById('totalDisplay').innerText = '$' + total;
     document.getElementById('cartCountTop').innerText = totalQty + ' 件';
@@ -473,15 +474,16 @@
     } else {
       let html = '';
       cart.forEach((item, index) => {
+        const itemQty = item.quantity || item.qty;
         html += `
           <div class="cart-item-row">
             <div class="cart-item-info">
               <div class="cart-item-title">${item.name} (${item.portion})</div>
-              <div class="cart-item-sub">${item.note ? item.note + ' | ' : ''}$${item.price} x ${item.qty}</div>
+              <div class="cart-item-sub">${item.note ? item.note + ' | ' : ''}$${item.price} x ${itemQty}</div>
             </div>
             <div class="cart-item-ctrl">
               <button class="btn-circle" style="width:24px;height:24px;font-size:14px;" onclick="updateCartQty(${index}, -1)">-</button>
-              <span style="font-weight:bold; font-size:14px;">${item.qty}</span>
+              <span style="font-weight:bold; font-size:14px;">${itemQty}</span>
               <button class="btn-circle" style="width:24px;height:24px;font-size:14px;" onclick="updateCartQty(${index}, 1)">+</button>
               <button class="btn-del" onclick="removeCartItem(${index})">刪除</button>
             </div>
@@ -495,9 +497,12 @@
   }
 
   function updateCartQty(index, delta) {
-    cart[index].qty += delta;
-    if (cart[index].qty <= 0) {
+    let newQty = (cart[index].quantity || cart[index].qty) + delta;
+    if (newQty <= 0) {
       cart.splice(index, 1);
+    } else {
+      cart[index].quantity = newQty;
+      cart[index].qty = newQty;
     }
     openCartModal();
     renderGrid();
@@ -528,22 +533,25 @@
     if (!phone) { alert('請填寫【電話】！'); return; }
     if (cart.length === 0) { alert('購物車是空的，請至少點選一項餐點！'); return; }
 
-    let bagFlavors = [selectedFlavor.value];
-    if (document.getElementById('chk_basil').checked) bagFlavors.push('不要九層塔');
+    let spice = selectedFlavor.value;
+    let preference = document.getElementById('chk_basil').checked ? '不要九層塔' : '無';
 
-    let totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    let totalPrice = cart.reduce((sum, item) => sum + (item.price * (item.quantity || item.qty)), 0);
     const submitBtn = document.querySelector('.btn-submit');
     submitBtn.disabled = true;
     submitBtn.innerText = '訂單傳送中...';
 
+    // 關鍵修正：將欄位名稱與 GAS / Webhook 完全對齊
     const payload = { 
-      name, 
-      phone, 
-      remark,
-      bagFlavors, 
-      items: cart, 
-      totalPrice,
-      lineUid: userLineUid
+      action: "createOrder",
+      userId: userLineUid,     // 👈 對齊後端 userId 欄位
+      name: name, 
+      phone: phone, 
+      spice: spice,            // 👈 對齊辣度欄位
+      preference: preference,  // 👈 對齊偏好欄位
+      note: remark,            // 👈 對齊備註欄位
+      items: cart,             // 👈 每項 item 皆有 name, portion, quantity
+      totalPrice: totalPrice
     };
 
     fetch(GAS_WEB_APP_URL, {
@@ -554,14 +562,14 @@
     .then(res => res.json())
     .then(res => {
       if (res.success) {
-        alert(`🎉 下單成功！您的取單號為 #${res.orderNo}`);
+        alert(`🎉 下單成功！您的取單號為 #${res.orderId || res.orderNo}`);
         if (typeof liff !== 'undefined' && liff.isInClient()) {
           liff.closeWindow();
         } else {
           location.reload();
         }
       } else {
-        alert('下單失敗：' + (res.error || '未知錯誤'));
+        alert('下單失敗：' + (res.message || res.error || '未知錯誤'));
         submitBtn.disabled = false;
         submitBtn.innerText = '💛 確認送出訂單 💛';
       }
