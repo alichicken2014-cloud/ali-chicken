@@ -104,7 +104,7 @@
     }
   }
 
-  // 2. 將 HTML 轉為圖片並傳送給 RawBT (完全不卡死、絕不亂碼)
+  // 2. 將 HTML 轉為圖片並傳送給 RawBT (修正 RawBT 圖片模式)
   async function sendToRawBTGraphic(order) {
     try {
       // 填入資料到隱藏小票模板
@@ -125,20 +125,22 @@
 
       // 使用 html2canvas 將 DOM 轉成 PNG 圖片 Canvas
       const canvas = await html2canvas(ticketElem, {
-        scale: 2, // 提高解析度使新細明體邊緣清晰
+        scale: 2, // 提高解析度使字體邊緣清晰
         backgroundColor: "#ffffff"
       });
 
-      // 取得 Base64 圖片資料 (去掉 data:image/png;base64, 前綴)
-      const imgBase64 = canvas.toDataURL("image/png").replace(/^data:image\/(png|jpg);base64,/, "");
+      // 1. 取得 DataURL
+      const imgDataUrl = canvas.toDataURL("image/png");
 
-      // 使用 RawBT 圖片格式傳送 Protocol
-      const rawbtUrl = "rawbt:base64," + imgBase64;
+      // 2. 構建 Android Intent 呼叫 RawBT 印出圖片 (指定傳送資料類型為 image/png)
+      const base64Data = imgDataUrl.replace(/^data:image\/png;base64,/, "");
       
-      const printWin = window.open(rawbtUrl, '_self');
-      if (printWin) {
-        setTimeout(() => { printWin.close(); }, 300);
-      }
+      // 使用 RawBT 官方 Android Intent URL 語法指定為圖片
+      const intentUrl = "intent:base64," + base64Data + "#Intent;scheme=rawbt;type=image/png;package=ru.a402d.rawbtprinter;end;";
+
+      // 3. 觸發 RawBT
+      window.location.href = intentUrl;
+
     } catch (err) {
       console.error("圖形化列印失敗:", err);
     }
