@@ -11,9 +11,11 @@
     body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; }
     
     /* 頂部看板列 */
-    .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
     .header h2 { margin: 0; font-size: 22px; color: #333; }
+    .btn-group { display: flex; gap: 10px; }
     .status-btn { padding: 10px 18px; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+    .bt-btn { background-color: #007bff; color: white; }
     .open { background-color: #28a745; color: white; }
     .closed { background-color: #dc3545; color: white; }
     
@@ -32,13 +34,13 @@
     .btn-print { background: #ffc107; color: #212529; }
     .btn-done { background: #28a745; color: white; }
     
-    /* 隱藏的列印畫布：專門渲染要列印的小票模板 (新細明體 / 粗體大字) */
+    /* 隱藏的列印畫布：專門渲染要列印的小票模板 */
     #print-ticket-template {
       position: absolute; left: -9999px; top: -9999px;
-      width: 384px; /* 標準 58mm 熱感應紙寬度 */
+      width: 384px; /* 58mm 熱感應紙標準寬度 */
       background: #ffffff;
       color: #000000;
-      font-family: "MingLiU", "PMingLiU", "新細明體", serif; /* 指定新細明體 */
+      font-family: "MingLiU", "PMingLiU", "新細明體", serif;
       padding: 10px;
       box-sizing: border-box;
     }
@@ -55,7 +57,8 @@
 
 <div class="header">
   <h2>🐥 阿力香雞排-崑山店 (廚房看板)</h2>
-  <div>
+  <div class="btn-group">
+    <button id="connect-bt-btn" class="status-btn bt-btn" onclick="connectBluetooth()">🔵 連接出單機</button>
     <button id="toggle-status-btn" class="status-btn open" onclick="toggleStatus()">載入中...</button>
   </div>
 </div>
@@ -63,13 +66,13 @@
 <!-- 訂單卡片網格區域 -->
 <div class="card-grid" id="orders-container"></div>
 
-<!-- 隱藏的出單小票繪製容器 (會自動轉換為圖片傳送給藍牙印表機) -->
+<!-- 隱藏的出單小票繪製容器 -->
 <div id="print-ticket-template">
   <div class="ticket-title">🎉【阿力香雞排-崑山店】</div>
   <div class="ticket-num" id="p-order-id">取單號碼：#0</div>
   <div class="ticket-info" id="p-time">時間：--:--</div>
   <div class="ticket-info" id="p-name">👤 訂購人：--</div>
-  <div class="ticket-info" id="p-phone">📞 電 话：--</div>
+  <div class="ticket-info" id="p-phone">📞 電 話：--</div>
   
   <div class="ticket-highlight">
     <div>🌶️ 整包調味：<span id="p-spice">--</span></div>
@@ -85,15 +88,50 @@
 </div>
 
 <script>
-  // ⚙️ 您的 GAS URL
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec"; 
   
   let knownOrderNos = new Set();
   let currentIsOpen = true;
   let printQueue = [];
   let isPrinting = false;
+  let printCharacteristic = null; // 藍牙特徵值
 
-  // 1. 語音播報功能
+  // 1. Web Bluetooth 藍牙連線功能
+  async function connectBluetooth() {
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', 4953] // 常見熱感應印表機藍牙服務
+      });
+
+      const server = await device.gatt.connect();
+      const services = await server.getPrimaryServices();
+      
+      for (const service of services) {
+        const characteristics = await service.getCharacteristics();
+        for (const c of characteristics) {
+          if (c.properties.write || c.properties.writeWithoutResponse) {
+            printCharacteristic = c;
+            break;
+          }
+        }
+        if (printCharacteristic) break;
+      }
+
+      if (printCharacteristic) {
+        document.getElementById('connect-bt-btn').innerText = "🟢 出單機已連線";
+        document.getElementById('connect-bt-btn').style.backgroundColor = "#28a745";
+        alert("藍牙出單機連線成功！");
+      } else {
+        alert("已找到藍牙裝置，但未能找到可寫入的列印通道。");
+      }
+    } catch (err) {
+      console.error("藍牙連線失敗:", err);
+      alert("藍牙連線失敗或被取消: " + err.message);
+    }
+  }
+
+  // 2. 語音播報功能
   function speakAlert(text) {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -104,7 +142,56 @@
     }
   }
 
-  // 2. 呼叫免費 ESC/POS Print Service App 列印圖片
+  // 3. 將 Canvas 圖片轉換為 ESC/POS Raster 指令流並發送到藍牙
+  async function sendToBluetoothPrinter(canvas) {
+    if (!printCharacteristic) {
+      console.warn("藍牙未連線，跳過自動列印");
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const imgData = ctx.getImageData(0, 0, width, height);
+    
+    // ESC/POS 初始化指令
+    let bytes = [0x1B, 0x40]; 
+
+    // 將二值化圖片點陣轉換為 ESC/POS Raster 位元數據
+    const widthBytes = Math.ceil(width / 8);
+    bytes.push(0x1D, 0x76, 0x30, 0, widthBytes % 256, Math.floor(widthBytes / 256), height % 256, Math.floor(height / 256));
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < widthBytes; x++) {
+        let byteVal = 0;
+        for (let b = 0; b < 8; b++) {
+          const pixelX = x * 8 + b;
+          if (pixelX < width) {
+            const idx = (y * width + pixelX) * 4;
+            // 算灰階度，小於 128視為黑點
+            const avg = (imgData.data[idx] + imgData.data[idx + 1] + imgData.data[idx + 2]) / 3;
+            if (avg < 128) {
+              byteVal |= (1 << (7 - b));
+            }
+          }
+        }
+        bytes.push(byteVal);
+      }
+    }
+
+    // 切紙與走紙指令 (進紙 3 行)
+    bytes.push(0x1B, 0x64, 0x03);
+
+    // 分段發送給藍牙 (防止藍牙 Buffer 溢位)
+    const chunkSize = 100;
+    const dataUint8 = new Uint8Array(bytes);
+    for (let i = 0; i < dataUint8.length; i += chunkSize) {
+      const chunk = dataUint8.slice(i, i + chunkSize);
+      await printCharacteristic.writeValue(chunk);
+    }
+  }
+
+  // 4. 列印處理核心
   async function sendToRawBTGraphic(order) {
     try {
       document.getElementById('p-order-id').innerText = "取單號碼：" + (order.orderId || order.orderNo || '#--');
@@ -123,23 +210,19 @@
       const ticketElem = document.getElementById('print-ticket-template');
 
       const canvas = await html2canvas(ticketElem, {
-        scale: 2,
+        scale: 1, // 採用 1:1 像素尺寸
+        width: 384,
         backgroundColor: "#ffffff"
       });
 
-      const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
-
-      // 呼叫 ESC/POS Print App 的 Intent 語法
-      const intentUrl = "intent:base64," + base64Data + "#Intent;scheme=escposprint;type=image/png;package=com.posprinter.service;end;";
-
-      window.location.href = intentUrl;
+      await sendToBluetoothPrinter(canvas);
 
     } catch (err) {
       console.error("列印失敗:", err);
     }
   }
 
-  // 3. 列印隊列控制
+  // 5. 列印隊列控制
   function queuePrint(order) {
     printQueue.push(order);
     processQueue();
@@ -151,16 +234,15 @@
     isPrinting = true;
     const order = printQueue.shift();
 
-    sendToRawBTGraphic(order);
-
-    // 每單之間預留 4 秒傳送與實體列印時間
-    setTimeout(() => {
-      isPrinting = false;
-      processQueue();
-    }, 4000);
+    sendToRawBTGraphic(order).then(() => {
+      setTimeout(() => {
+        isPrinting = false;
+        processQueue();
+      }, 3000);
+    });
   }
 
-  // 4. 從 GAS 獲取最新訂單
+  // 6. 從 GAS 獲取最新訂單
   async function fetchOrders() {
     try {
       const res = await fetch(`${GAS_URL}?action=getKitchenOrders`);
@@ -177,7 +259,7 @@
     }
   }
 
-  // 5. 繪製廚房看板卡片
+  // 7. 繪製廚房看板卡片
   function renderOrders(orders) {
     const container = document.getElementById("orders-container");
     container.innerHTML = "";
@@ -230,7 +312,7 @@
     });
   }
 
-  // 6. 點擊「完成出單」
+  // 8. 點擊「完成出單」
   async function completeOrder(row) {
     try {
       await fetch(GAS_URL, {
@@ -244,7 +326,7 @@
     }
   }
 
-  // 7. 切換營業狀態
+  // 9. 切換營業狀態
   async function toggleStatus() {
     const nextStatus = !currentIsOpen;
     try {
