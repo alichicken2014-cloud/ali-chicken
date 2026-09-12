@@ -42,6 +42,7 @@
       color: #000000;
       font-family: "MingLiU", "PMingLiU", "新細明體", serif;
       padding: 5px;
+      padding-bottom: 40px; /* 增加底部留白，避免撕紙撕到內容 */
       box-sizing: border-box;
     }
     .ticket-title { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 5px; }
@@ -101,26 +102,23 @@
   let isPrinting = false;
   let printCharacteristic = null;
 
-  // 🛠️ 電話號碼格式化函式 (自動轉為 0000-000-000 格式)
+  // 🛠️ 電話號碼格式化函式 (0000-000-000)
   function formatPhone(phone) {
     if (!phone) return '';
-    let cleaned = ('' + phone).replace(/\D/g, ''); // 去除非數字字元
+    let cleaned = ('' + phone).replace(/\D/g, '');
     
-    // 如果是國際開頭 886，自動轉成 0
     if (cleaned.startsWith('886')) {
       cleaned = '0' + cleaned.substring(3);
     }
-    // 如果輸入沒有補 0 (例如 917522271)，自動補 0 變成 0917522271
     if (cleaned.length === 9 && !cleaned.startsWith('0')) {
       cleaned = '0' + cleaned;
     }
 
-    // 格式化為 0000-000-000
     if (cleaned.length === 10) {
       return cleaned.replace(/(\d{4})(\d{3})(\d{3})/, '$1-$2-$3');
     }
     
-    return phone; // 不符合長度時保留原樣
+    return phone;
   }
 
   // 1. Web Bluetooth 藍牙連線功能
@@ -181,7 +179,7 @@
     const height = canvas.height;
     const imgData = ctx.getImageData(0, 0, width, height);
     
-    let bytes = [0x1B, 0x40]; // 初始化
+    let bytes = [0x1B, 0x40]; // 初始化指令
 
     const widthBytes = Math.ceil(width / 8);
     bytes.push(0x1D, 0x76, 0x30, 0, widthBytes % 256, Math.floor(widthBytes / 256), height % 256, Math.floor(height / 256));
@@ -203,8 +201,8 @@
       }
     }
 
-    // 進紙切紙
-    bytes.push(0x1B, 0x64, 0x03);
+    // 🔧 核心修正：將進紙走紙行數改為 6 行 (0x06)，多吐出 3 公分紙張
+    bytes.push(0x1B, 0x64, 0x06);
 
     const chunkSize = 100;
     const dataUint8 = new Uint8Array(bytes);
