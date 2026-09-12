@@ -63,13 +63,13 @@
 <!-- 訂單卡片網格區域 -->
 <div class="card-grid" id="orders-container"></div>
 
-<!-- 隱藏的出單小票繪製容器 (會自動轉換為圖片傳送給 RawBT) -->
+<!-- 隱藏的出單小票繪製容器 (會自動轉換為圖片傳送給藍牙印表機) -->
 <div id="print-ticket-template">
   <div class="ticket-title">🎉【阿力香雞排-崑山店】</div>
   <div class="ticket-num" id="p-order-id">取單號碼：#0</div>
   <div class="ticket-info" id="p-time">時間：--:--</div>
   <div class="ticket-info" id="p-name">👤 訂購人：--</div>
-  <div class="ticket-info" id="p-phone">📞 電 話：--</div>
+  <div class="ticket-info" id="p-phone">📞 電 话：--</div>
   
   <div class="ticket-highlight">
     <div>🌶️ 整包調味：<span id="p-spice">--</span></div>
@@ -104,7 +104,7 @@
     }
   }
 
-  // 替代方案：呼叫免費 ESC/POS Print Service App
+  // 2. 呼叫免費 ESC/POS Print Service App 列印圖片
   async function sendToRawBTGraphic(order) {
     try {
       document.getElementById('p-order-id').innerText = "取單號碼：" + (order.orderId || order.orderNo || '#--');
@@ -129,7 +129,7 @@
 
       const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
 
-      // 改為呼叫 ESC/POS Print App 的 Intent 語法
+      // 呼叫 ESC/POS Print App 的 Intent 語法
       const intentUrl = "intent:base64," + base64Data + "#Intent;scheme=escposprint;type=image/png;package=com.posprinter.service;end;";
 
       window.location.href = intentUrl;
@@ -139,31 +139,7 @@
     }
   }
 
-      // 3. 建立彈出視窗並觸發系統列印
-      const imgUrl = canvas.toDataURL("image/png");
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>列印單據</title>
-            <style>
-              body { margin: 0; display: flex; justify-content: center; align-items: flex-start; }
-              img { width: 100%; max-width: 384px; }
-            </style>
-          </head>
-          <body>
-            <img src="${imgUrl}" onload="window.print(); window.close();" />
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-
-    } catch (err) {
-      console.error("列印失敗:", err);
-    }
-  }
-
-  // 3. 列印隊列控制 (防止多單連發導致手機或出單機藍牙塞車)
+  // 3. 列印隊列控制
   function queuePrint(order) {
     printQueue.push(order);
     processQueue();
