@@ -16,6 +16,7 @@
     .btn-group { display: flex; gap: 10px; }
     .status-btn { padding: 10px 18px; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; }
     .bt-btn { background-color: #007bff; color: white; }
+    .audio-btn { background-color: #ff9800; color: white; }
     .open { background-color: #28a745; color: white; }
     .closed { background-color: #dc3545; color: white; }
     
@@ -34,29 +35,29 @@
     .btn-print { background: #ffc107; color: #212529; }
     .btn-done { background: #28a745; color: white; }
     
-    /* 隱藏的列印畫布：專門渲染要列印的小票模板 */
+    /* 隱藏的列印畫布：專門渲染要列印的小票模板 (緊湊優化版) */
     #print-ticket-template {
       position: absolute; left: -9999px; top: -9999px;
-      width: 384px; /* 58mm 熱感應紙標準寬度 */
+      width: 384px;
       background: #ffffff;
       color: #000000;
-      font-family: "MingLiU", "PMingLiU", "新細明體", serif;
+      font-family: "MingLiU", "PMingLiU", "新細明體", sans-serif;
       padding: 5px;
-      padding-bottom: 40px; /* 增加底部留白，避免撕紙撕到內容 */
+      padding-bottom: 15px;
       box-sizing: border-box;
     }
-    .ticket-title { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 5px; }
-    .ticket-num { text-align: center; font-size: 42px; font-weight: 900; border-top: 3px dashed #000; border-bottom: 3px dashed #000; padding: 5px 0; margin: 5px 0; }
-    .ticket-info { font-size: 20px; font-weight: bold; margin: 4px 0; }
+    .ticket-title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+    .ticket-num { text-align: center; font-size: 38px; font-weight: 900; border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 4px 0; margin: 4px 0; }
+    .ticket-info { font-size: 18px; font-weight: bold; margin: 3px 0; }
     
     /* 中間調味區段 */
-    .ticket-highlight { border: 3px solid #000; padding: 8px; margin: 10px 0; font-size: 32px; font-weight: 900; background-color: #ffffff; line-height: 1.3; }
+    .ticket-highlight { border: 2px solid #000; padding: 6px; margin: 6px 0; font-size: 26px; font-weight: 900; background-color: #ffffff; line-height: 1.2; }
     
-    /* 中間餐點內容標題與明細 */
-    .ticket-items-title { font-size: 24px; font-weight: 900; margin-top: 10px; text-decoration: underline; }
-    .ticket-items { font-size: 34px; font-weight: 900; line-height: 1.4; margin: 8px 0; white-space: pre-line; word-break: break-all; }
+    /* 餐點內容標題與明細 */
+    .ticket-items-title { font-size: 20px; font-weight: 900; margin-top: 8px; text-decoration: underline; }
+    .ticket-items { font-size: 26px; font-weight: 900; line-height: 1.3; margin: 6px 0; white-space: pre-line; word-break: break-all; }
     
-    .ticket-divider { border-top: 2px dashed #000; margin: 10px 0; }
+    .ticket-divider { border-top: 2px dashed #000; margin: 8px 0; }
   </style>
 </head>
 <body>
@@ -64,6 +65,7 @@
 <div class="header">
   <h2>🐥 阿力香雞排-崑山店 (廚房看板)</h2>
   <div class="btn-group">
+    <button id="enable-audio-btn" class="status-btn audio-btn" onclick="enableAudio()">🔔 點擊啟用語音</button>
     <button id="connect-bt-btn" class="status-btn bt-btn" onclick="connectBluetooth()">🔵 連接出單機</button>
     <button id="toggle-status-btn" class="status-btn open" onclick="toggleStatus()">載入中...</button>
   </div>
@@ -89,8 +91,8 @@
   <div class="ticket-items" id="p-items"></div>
   
   <div class="ticket-divider"></div>
-  <div class="ticket-info" style="font-size: 24px;" id="p-note">📝 訂單備註：無</div>
-  <div class="ticket-info" style="font-size: 26px; font-weight: 900; text-align: right; margin-top: 8px;" id="p-total">💰 總金額：$0</div>
+  <div class="ticket-info" style="font-size: 20px;" id="p-note">📝 備註：無</div>
+  <div class="ticket-info" style="font-size: 24px; font-weight: 900; text-align: right; margin-top: 6px;" id="p-total">💰 總金額：$0</div>
 </div>
 
 <script>
@@ -101,6 +103,16 @@
   let printQueue = [];
   let isPrinting = false;
   let printCharacteristic = null;
+  let audioEnabled = false;
+
+  // 0. 解鎖語音功能
+  function enableAudio() {
+    audioEnabled = true;
+    speakAlert("語音播報已啟用");
+    const btn = document.getElementById('enable-audio-btn');
+    btn.innerText = "🔔 語音播報中";
+    btn.style.backgroundColor = "#28a745";
+  }
 
   // 🛠️ 電話號碼格式化函式 (0000-000-000)
   function formatPhone(phone) {
@@ -167,7 +179,10 @@
     }
   }
 
-  // 3. 將 Canvas 圖片轉換為 ESC/POS Raster 指令流發送到藍牙
+  // 延遲工具函式
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  // 3. 將 Canvas 圖片轉換為 ESC/POS Raster 指令流發送到藍牙（防爆 Buffer 緩衝優化）
   async function sendToBluetoothPrinter(canvas) {
     if (!printCharacteristic) {
       console.warn("藍牙未連線，跳過自動列印");
@@ -201,14 +216,16 @@
       }
     }
 
-    // 🔧 核心修正：將進紙走紙行數改為 6 行 (0x06)，多吐出 3 公分紙張
-    bytes.push(0x1B, 0x64, 0x06);
+    // 進紙走紙 4 行，讓內容完全過刀口
+    bytes.push(0x1B, 0x64, 0x04);
 
+    // 🔧 分段發送，每傳送 100 bytes 停頓 20ms，防止藍牙記憶體塞爆
     const chunkSize = 100;
     const dataUint8 = new Uint8Array(bytes);
     for (let i = 0; i < dataUint8.length; i += chunkSize) {
       const chunk = dataUint8.slice(i, i + chunkSize);
       await printCharacteristic.writeValue(chunk);
+      await sleep(20); 
     }
   }
 
@@ -227,7 +244,7 @@
       document.getElementById('p-pref').innerText = pref;
       
       document.getElementById('p-items').innerText = order.itemsDetail || order.items || '';
-      document.getElementById('p-note').innerText = "📝 訂單備註：" + (order.remark || order.note || '無');
+      document.getElementById('p-note').innerText = "📝 備註：" + (order.remark || order.note || '無');
       document.getElementById('p-total').innerText = "💰 總金額：$" + (order.totalPrice || 0);
 
       const ticketElem = document.getElementById('print-ticket-template');
@@ -261,7 +278,7 @@
       setTimeout(() => {
         isPrinting = false;
         processQueue();
-      }, 3000);
+      }, 2000);
     });
   }
 
