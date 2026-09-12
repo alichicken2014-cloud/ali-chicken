@@ -104,10 +104,9 @@
     }
   }
 
-  // 替代方案：改用系統內建原生列印（完全免費）
+  // 替代方案：呼叫免費 ESC/POS Print Service App
   async function sendToRawBTGraphic(order) {
     try {
-      // 1. 填入資料到隱藏小票模板
       document.getElementById('p-order-id').innerText = "取單號碼：" + (order.orderId || order.orderNo || '#--');
       document.getElementById('p-time').innerText = "時間：" + (order.orderTime || '');
       document.getElementById('p-name').innerText = "👤 訂購人：" + (order.name || '');
@@ -123,11 +122,22 @@
 
       const ticketElem = document.getElementById('print-ticket-template');
 
-      // 2. 轉成圖片 Canvas
       const canvas = await html2canvas(ticketElem, {
         scale: 2,
         backgroundColor: "#ffffff"
       });
+
+      const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+
+      // 改為呼叫 ESC/POS Print App 的 Intent 語法
+      const intentUrl = "intent:base64," + base64Data + "#Intent;scheme=escposprint;type=image/png;package=com.posprinter.service;end;";
+
+      window.location.href = intentUrl;
+
+    } catch (err) {
+      console.error("列印失敗:", err);
+    }
+  }
 
       // 3. 建立彈出視窗並觸發系統列印
       const imgUrl = canvas.toDataURL("image/png");
