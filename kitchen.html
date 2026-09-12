@@ -3,111 +3,148 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>阿力香雞排 - 廚房出單看板</title>
+  <title>阿力香雞排 崑山店 - 廚房出單看板</title>
+  <!-- 引入轉圖庫 html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; }
+    
+    /* 頂部看板列 */
     .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; }
     .header h2 { margin: 0; font-size: 22px; color: #333; }
     .status-btn { padding: 10px 18px; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; }
     .open { background-color: #28a745; color: white; }
     .closed { background-color: #dc3545; color: white; }
     
+    /* 看板卡片網格 */
     .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
     .card { background: white; border-radius: 8px; border-top: 6px solid #d35400; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: space-between; }
-    .card-header { display: flex; justify-content: space-between; align-items: center; font-size: 24px; font-weight: bold; color: #d35400; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; margin-bottom: 10px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; font-size: 26px; font-weight: bold; color: #d35400; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; margin-bottom: 10px; }
     .card-header .time { font-size: 14px; color: #666; font-weight: normal; }
-    .card-body { font-size: 15px; color: #444; line-height: 1.5; margin-bottom: 15px; }
-    .card-body strong { color: #000; }
+    .card-body { font-size: 16px; color: #333; line-height: 1.5; margin-bottom: 15px; }
     
-    .flavor-box { background: #fff8e7; border: 1px solid #ffeaa7; padding: 8px 10px; border-radius: 6px; margin: 8px 0; font-size: 15px; color: #d35400; font-weight: bold; }
-    .items-box { background: #fafafa; border-left: 3px solid #f39c12; padding: 8px; margin: 8px 0; font-size: 15px; white-space: pre-line; }
+    .flavor-box { background: #fff8e7; border: 2px solid #f39c12; padding: 8px 10px; border-radius: 6px; margin: 8px 0; font-size: 18px; color: #d35400; font-weight: bold; }
+    .items-box { background: #fafafa; border-left: 4px solid #f39c12; padding: 8px; margin: 8px 0; font-size: 16px; white-space: pre-line; font-weight: 500; }
     
     .card-footer { display: flex; gap: 8px; }
     .btn { flex: 1; padding: 10px 0; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: bold; }
     .btn-print { background: #ffc107; color: #212529; }
     .btn-done { background: #28a745; color: white; }
-    .btn:active { opacity: 0.8; }
+    
+    /* 隱藏的列印畫布：專門渲染要列印的小票模板 (新細明體 / 粗體大字) */
+    #print-ticket-template {
+      position: absolute; left: -9999px; top: -9999px;
+      width: 384px; /* 標準 58mm 熱感應紙寬度 */
+      background: #ffffff;
+      color: #000000;
+      font-family: "MingLiU", "PMingLiU", "新細明體", serif; /* 指定新細明體 */
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    .ticket-title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+    .ticket-num { text-align: center; font-size: 34px; font-weight: 900; border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 5px 0; margin: 5px 0; }
+    .ticket-info { font-size: 16px; font-weight: bold; margin: 3px 0; }
+    .ticket-highlight { border: 2px solid #000; padding: 6px; margin: 8px 0; font-size: 19px; font-weight: 900; background-color: #f0f0f0; }
+    .ticket-items-title { font-size: 18px; font-weight: bold; margin-top: 10px; text-decoration: underline; }
+    .ticket-items { font-size: 18px; font-weight: bold; line-height: 1.4; margin: 5px 0; white-space: pre-line; }
+    .ticket-divider { border-top: 1px dashed #000; margin: 8px 0; }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <h2>🐥 阿力香雞排 - 廚房看板</h2>
+  <h2>🐥 阿力香雞排-崑山店 (廚房看板)</h2>
   <div>
     <button id="toggle-status-btn" class="status-btn open" onclick="toggleStatus()">載入中...</button>
   </div>
 </div>
 
-<div class="card-grid" id="orders-container">
-  <!-- 動態渲染訂單卡片 -->
+<!-- 訂單卡片網格區域 -->
+<div class="card-grid" id="orders-container"></div>
+
+<!-- 隱藏的出單小票繪製容器 (會自動轉換為圖片傳送給 RawBT) -->
+<div id="print-ticket-template">
+  <div class="ticket-title">🎉【阿力香雞排-崑山店】</div>
+  <div class="ticket-num" id="p-order-id">取單號碼：#0</div>
+  <div class="ticket-info" id="p-time">時間：--:--</div>
+  <div class="ticket-info" id="p-name">👤 訂購人：--</div>
+  <div class="ticket-info" id="p-phone">📞 電 話：--</div>
+  
+  <div class="ticket-highlight">
+    <div>🌶️ 整包調味：<span id="p-spice">--</span></div>
+    <div id="p-pref-box">🌿 特殊偏好：<span id="p-pref">--</span></div>
+  </div>
+
+  <div class="ticket-items-title">📋 訂餐內容：</div>
+  <div class="ticket-items" id="p-items"></div>
+  
+  <div class="ticket-divider"></div>
+  <div class="ticket-info" id="p-note">📝 訂單備註：無</div>
+  <div class="ticket-info" style="font-size:22px; font-weight:900; text-align:right; margin-top:5px;" id="p-total">💰 總金額：$0</div>
 </div>
 
 <script>
-  // ⚙️ 最新部署的 GAS Web App URL
+  // ⚙️ 您的 GAS URL
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec"; 
   
   let knownOrderNos = new Set();
   let currentIsOpen = true;
-  
-  // 列印隊列控制
   let printQueue = [];
   let isPrinting = false;
 
   // 1. 語音播報功能
   function speakAlert(text) {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // 停止先前的語音，避免積壓
+      window.speechSynthesis.cancel();
       const utterThis = new SpeechSynthesisUtterance(text);
       utterThis.lang = 'zh-TW';
-      utterThis.rate = 1.1; // 稍微加速播報
+      utterThis.rate = 1.1;
       window.speechSynthesis.speak(utterThis);
     }
   }
 
-  // 2. RawBT 靜默列印（安全非阻塞機制）
-  function sendToRawBT(order) {
+  // 2. 將 HTML 轉為圖片並傳送給 RawBT (完全不卡死、絕不亂碼)
+  async function sendToRawBTGraphic(order) {
     try {
-      const orderNoStr = order.orderId || order.orderNo || "無號碼";
-      const spiceStr = order.spice || "胡椒";
-      const prefStr = order.preference || "無";
-      const itemsStr = order.itemsDetail || order.items || "";
+      // 填入資料到隱藏小票模板
+      document.getElementById('p-order-id').innerText = "取單號碼：" + (order.orderId || order.orderNo || '#--');
+      document.getElementById('p-time').innerText = "時間：" + (order.orderTime || '');
+      document.getElementById('p-name').innerText = "👤 訂購人：" + (order.name || '');
+      document.getElementById('p-phone').innerText = "📞 電 話：" + (order.phone || '');
+      document.getElementById('p-spice').innerText = order.spice || '胡椒';
       
-      // 組合熱感應紙列印內容
-      const textToPrint = 
-`==============================
-【阿力香雞排 - 出貨單】
-取單號碼：${orderNoStr}
-下單時間：${order.orderTime || ''}
-訂 購 人：${order.name || ''}
-聯絡電話：${order.phone || ''}
-------------------------------
-🌶️ 整包辣度：${spiceStr}
-🌿 特殊偏好：${prefStr}
-------------------------------
-餐點明細：
-${itemsStr}
-------------------------------
-備註：${order.remark || order.note || '無'}
-金額：$${order.totalPrice || 0} 元
-==============================
-
-
-`; // 底部留空白方便切紙
-
-      const rawbtUrl = "rawbt:base64," + btoa(unescape(encodeURIComponent(textToPrint)));
+      const pref = order.preference || '無';
+      document.getElementById('p-pref').innerText = pref;
       
-      // 使用背景 window 開啟並立即關閉，避免卡紙/無紙導致網頁被 block
+      document.getElementById('p-items').innerText = order.itemsDetail || order.items || '';
+      document.getElementById('p-note').innerText = "📝 訂單備註：" + (order.remark || order.note || '無');
+      document.getElementById('p-total').innerText = "💰 總金額：$" + (order.totalPrice || 0);
+
+      const ticketElem = document.getElementById('print-ticket-template');
+
+      // 使用 html2canvas 將 DOM 轉成 PNG 圖片 Canvas
+      const canvas = await html2canvas(ticketElem, {
+        scale: 2, // 提高解析度使新細明體邊緣清晰
+        backgroundColor: "#ffffff"
+      });
+
+      // 取得 Base64 圖片資料 (去掉 data:image/png;base64, 前綴)
+      const imgBase64 = canvas.toDataURL("image/png").replace(/^data:image\/(png|jpg);base64,/, "");
+
+      // 使用 RawBT 圖片格式傳送 Protocol
+      const rawbtUrl = "rawbt:base64," + imgBase64;
+      
       const printWin = window.open(rawbtUrl, '_self');
       if (printWin) {
         setTimeout(() => { printWin.close(); }, 300);
       }
     } catch (err) {
-      console.error("RawBT 派送失敗:", err);
+      console.error("圖形化列印失敗:", err);
     }
   }
 
-  // 3. 列印隊列處理 (避免連續進單藍牙衝突)
+  // 3. 列印隊列控制 (防止多單連發導致手機或出單機藍牙塞車)
   function queuePrint(order) {
     printQueue.push(order);
     processQueue();
@@ -119,16 +156,16 @@ ${itemsStr}
     isPrinting = true;
     const order = printQueue.shift();
 
-    sendToRawBT(order);
+    sendToRawBTGraphic(order);
 
-    // 預留 3.5 秒印表機實體列印時間，隨後解鎖處理下一張
+    // 每單之間預留 4 秒傳送與實體列印時間
     setTimeout(() => {
       isPrinting = false;
       processQueue();
-    }, 3500);
+    }, 4000);
   }
 
-  // 4. 從 Google Apps Script 獲取廚房最新訂單
+  // 4. 從 GAS 獲取最新訂單
   async function fetchOrders() {
     try {
       const res = await fetch(`${GAS_URL}?action=getKitchenOrders`);
@@ -141,11 +178,11 @@ ${itemsStr}
       const orders = data.orders || (Array.isArray(data) ? data : []);
       renderOrders(orders);
     } catch (err) {
-      console.error("抓取訂單失敗:", err);
+      console.error("讀取訂單失敗:", err);
     }
   }
 
-  // 5. 渲染廚房看板畫面
+  // 5. 繪製廚房看板卡片
   function renderOrders(orders) {
     const container = document.getElementById("orders-container");
     container.innerHTML = "";
@@ -158,7 +195,6 @@ ${itemsStr}
     orders.forEach(order => {
       const orderNo = order.orderId || order.orderNo;
 
-      // 判斷是否為新訂單 (新訂單觸發語音與自動列印)
       if (orderNo && !knownOrderNos.has(orderNo)) {
         knownOrderNos.add(orderNo);
         speakAlert("你有新訂單");
@@ -177,7 +213,7 @@ ${itemsStr}
             <div><strong>顧客：</strong>${order.name || '顧客'} (${order.phone || ''})</div>
             
             <div class="flavor-box">
-              🌶️ 整包辣度：${order.spice || '胡椒'}<br>
+              🌶️ 整包調味：${order.spice || '胡椒'}<br>
               🌿 特殊偏好：${order.preference || '無'}
             </div>
 
@@ -185,7 +221,7 @@ ${itemsStr}
             <div class="items-box">${order.itemsDetail || order.items || ''}</div>
             
             <div><strong>備註：</strong>${order.remark || order.note || '無'}</div>
-            <div style="margin-top:5px; font-weight:bold; color:#e67e22; font-size:18px;">
+            <div style="margin-top:8px; font-weight:bold; color:#e67e22; font-size:18px;">
               <strong>總金額：</strong>$${order.totalPrice || 0}
             </div>
           </div>
@@ -199,7 +235,7 @@ ${itemsStr}
     });
   }
 
-  // 6. 點擊「完成」移除訂單並更新 Google Sheet 狀態
+  // 6. 點擊「完成出單」
   async function completeOrder(row) {
     try {
       await fetch(GAS_URL, {
@@ -209,11 +245,11 @@ ${itemsStr}
       });
       fetchOrders();
     } catch (err) {
-      alert("更新狀態失敗，請重試");
+      alert("更新失敗");
     }
   }
 
-  // 7. 切換營業 / 臨時公休狀態
+  // 7. 切換營業狀態
   async function toggleStatus() {
     const nextStatus = !currentIsOpen;
     try {
@@ -224,7 +260,7 @@ ${itemsStr}
       });
       fetchOrders();
     } catch (err) {
-      alert("切換營業狀態失敗");
+      alert("切換狀態失敗");
     }
   }
 
@@ -240,7 +276,7 @@ ${itemsStr}
     }
   }
 
-  // 8. 輪詢機制：每 6 秒自動更新一次看板
+  // 每 6 秒自動輪詢一次
   setInterval(fetchOrders, 6000);
   fetchOrders();
 </script>
