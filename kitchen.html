@@ -151,10 +151,20 @@
   let printCharacteristic = null;
   let isFirstLoad = true;
 
+  // 0. 自動營業時間判定邏輯（週一至週六 15:00 ~ 23:00）
+  function checkAutoBusinessHours() {
+    const now = new Date();
+    const day = now.getDay(); // 0 是週日, 1-6 是週一至週六
+    const hours = now.getHours();
+
+    if (day === 0) return false; // 週日固定公休
+    return (hours >= 15 && hours < 23);
+  }
+
   // 1. 語音播報功能
   function speakText(text) {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // 停止先前的聲音
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'zh-TW';
       utterance.rate = 1.0;
@@ -224,7 +234,6 @@
 
     try {
       const bytes = encoder.encode(content);
-      // 分段發送數據防塞車
       const chunkSize = 512;
       for (let i = 0; i < bytes.length; i += chunkSize) {
         const chunk = bytes.slice(i, i + chunkSize);
@@ -247,7 +256,6 @@
       
       const orders = data.orders || [];
       
-      // 檢查新訂單並觸發語音/出單
       if (!isFirstLoad) {
         orders.forEach(order => {
           if (!existingOrderIds.has(order.orderId)) {
@@ -261,12 +269,10 @@
         });
       }
 
-      // 首次載入時順便填入公告設定
       if (isFirstLoad && data.announcement) {
         renderAnnouncementUI(data.announcement);
       }
 
-      // 更新目前單號列表
       existingOrderIds = new Set(orders.map(o => o.orderId));
       isFirstLoad = false;
 
@@ -349,11 +355,7 @@
   function toggleAnnouncementFields() {
     const type = document.getElementById('announcement-type').value;
     const vacationGroup = document.getElementById('vacation-dates-group');
-    if (type === 'vacation') {
-      vacationGroup.style.display = 'block';
-    } else {
-      vacationGroup.style.display = 'none';
-    }
+    vacationGroup.style.display = (type === 'vacation') ? 'block' : 'none';
   }
 
   function renderAnnouncementUI(ann) {
@@ -429,7 +431,7 @@
     }
   }
 
-  // 開關營業
+  // 手動開關營業狀態
   async function toggleStoreStatus() {
     const nextStatus = !isOpenState;
     try {
@@ -445,13 +447,23 @@
     }
   }
 
+  // 狀態按鈕 UI 判斷 logic
   function updateStatusUI(isOpen) {
     const btn = document.getElementById("store-status-btn");
-    if (isOpen) {
-      btn.innerText = "🟢 營業中 (點擊公休)";
+    const isAutoOpen = checkAutoBusinessHours();
+    const isSunday = (new Date().getDay() === 0);
+
+    if (isSunday) {
+      btn.innerText = "🔴 週日固定公休 (點擊可強制開關)";
+      btn.className = "status-btn status-closed";
+    } else if (isOpen && isAutoOpen) {
+      btn.innerText = "🟢 營業中 (15:00-23:00)";
       btn.className = "status-btn status-open";
+    } else if (!isOpen) {
+      btn.innerText = "🔴 手動打烊 / 店休中";
+      btn.className = "status-btn status-closed";
     } else {
-      btn.innerText = "🔴 公休中 (點擊開店)";
+      btn.innerText = "🔴 非營業時間 (15:00-23:00)";
       btn.className = "status-btn status-closed";
     }
   }
