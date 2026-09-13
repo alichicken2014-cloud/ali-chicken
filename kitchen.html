@@ -9,12 +9,19 @@
     body { background-color: #1e1e2f; color: #ffffff; margin: 0; padding: 15px; }
 
     /* 頂部標題與主開關 */
-    .top-bar { display: flex; justify-content: space-between; align-items: center; background: #27293d; padding: 12px 20px; border-radius: 10px; margin-bottom: 15px; }
-    .top-bar h1 { margin: 0; font-size: 22px; color: #ff8c00; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; background: #27293d; padding: 12px 20px; border-radius: 10px; margin-bottom: 12px; }
+    .top-bar h1 { margin: 0; font-size: 20px; color: #ff8c00; }
     
-    .status-btn { padding: 10px 18px; border: none; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; color: white; }
+    .status-btn { padding: 8px 16px; border: none; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; color: white; }
     .status-open { background-color: #28a745; }
     .status-closed { background-color: #dc3545; }
+
+    /* 工具控制列 (藍牙連線 & 語音測試) */
+    .tool-bar { display: flex; gap: 10px; align-items: center; background: #27293d; padding: 10px 20px; border-radius: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tool-btn { padding: 8px 14px; border: 1px solid #444; background: #3a3b5a; color: white; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .tool-btn:hover { background: #4e5077; }
+    .printer-status { font-size: 14px; font-weight: bold; color: #ff4757; }
+    .printer-status.connected { color: #2ed573; }
 
     /* 功能切換頁籤 */
     .nav-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
@@ -24,14 +31,13 @@
     /* 訂單卡片網格 */
     .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
     .order-card { background: #27293d; border-radius: 10px; padding: 15px; border-left: 6px solid #ff8c00; position: relative; }
-    .order-card.doing { border-left-color: #007bff; }
     
     .order-header { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; border-bottom: 1px solid #3f4260; padding-bottom: 8px; margin-bottom: 8px; }
     .order-info { font-size: 14px; color: #bbb; margin-bottom: 8px; }
     .items-box { background: #1e1e2f; padding: 10px; border-radius: 6px; font-size: 16px; font-weight: bold; color: #00ffcc; white-space: pre-wrap; margin-bottom: 10px; }
     .order-actions { display: flex; gap: 8px; }
-    .action-btn { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; }
-    .btn-doing { background: #007bff; }
+    .action-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; }
+    .btn-print { background: #17a2b8; }
     .btn-finish { background: #28a745; }
 
     /* 菜單管理列表 */
@@ -50,8 +56,15 @@
 
 <!-- 頂部營業控制列 -->
 <div class="top-bar">
-  <h1>🍳 崑山店 - 廚房與菜單管理</h1>
+  <h1>🍳 阿力香雞排 崑山店 - 廚房系統</h1>
   <button id="store-status-btn" class="status-btn status-open" onclick="toggleStoreStatus()">讀取中...</button>
+</div>
+
+<!-- 工具列：藍牙印表機 & 語音測試 -->
+<div class="tool-bar">
+  <button class="tool-btn" onclick="connectBluetoothPrinter()">🖨️ 連接藍牙出單機</button>
+  <span id="printer-status-text" class="printer-status">未連線</span>
+  <button class="tool-btn" onclick="speakText('語音測試正常')">🔊 語音測試</button>
 </div>
 
 <!-- 分頁頁籤 -->
@@ -90,8 +103,97 @@
 
   let isOpenState = true;
   let menuList = [];
+  let existingOrderIds = new Set();
+  let bluetoothDevice = null;
+  let printCharacteristic = null;
+  let isFirstLoad = true;
 
-  // 1. 初始化讀取
+  // 1. 語音播報功能
+  function speakText(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // 停止先前的聲音
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'zh-TW';
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+  }
+
+  // 2. Web Bluetooth 連線出單機
+  async function connectBluetoothPrinter() {
+    try {
+      bluetoothDevice = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+      });
+
+      const server = await bluetoothDevice.gatt.connect();
+      const services = await server.getPrimaryServices();
+      
+      for (const service of services) {
+        const characteristics = await service.getCharacteristics();
+        for (const c of characteristics) {
+          if (c.properties.write || c.properties.writeWithoutResponse) {
+            printCharacteristic = c;
+            break;
+          }
+        }
+        if (printCharacteristic) break;
+      }
+
+      if (printCharacteristic) {
+        const statusText = document.getElementById("printer-status-text");
+        statusText.innerText = "🟢 已連線：" + bluetoothDevice.name;
+        statusText.className = "printer-status connected";
+        speakText("藍牙出單機連線成功");
+      } else {
+        alert("⚠️ 找不到可寫入的出單機服務！");
+      }
+    } catch (err) {
+      console.error("藍牙連線錯誤:", err);
+      alert("⚠️ 藍牙連線失敗：" + err.message);
+    }
+  }
+
+  // 3. 列印單據格式化
+  async function printOrder(order) {
+    if (!printCharacteristic) {
+      alert("⚠️ 請先點擊「連接藍牙出單機」！");
+      return;
+    }
+
+    const encoder = new TextEncoder();
+    let content = "";
+    content += "==============================\n";
+    content += "   阿力香雞排 崑山店 點餐單   \n";
+    content += "==============================\n";
+    content += `單號：${order.orderId}\n`;
+    content += `時間：${order.orderTime}\n`;
+    content += `姓名：${order.name}\n`;
+    content += `電話：${order.phone}\n`;
+    content += `調味：${order.spice} | 偏好：${order.preference}\n`;
+    content += "------------------------------\n";
+    content += `${order.itemsDetail}\n`;
+    content += "------------------------------\n";
+    if (order.remark) content += `備註：${order.remark}\n`;
+    content += `總金額：$${order.totalPrice} 元\n`;
+    content += "==============================\n\n\n\n";
+
+    try {
+      const bytes = encoder.encode(content);
+      // 分段發送數據防塞車
+      const chunkSize = 512;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.slice(i, i + chunkSize);
+        await printCharacteristic.writeValue(chunk);
+      }
+    } catch (err) {
+      console.error("列印失敗:", err);
+      alert("⚠️ 列印失敗：" + err.message);
+    }
+  }
+
+ // 4. 取得看板資料與偵測新訂單
   async function fetchKitchenData() {
     try {
       const res = await fetch(`${GAS_URL}?action=getKitchenOrders`);
@@ -100,7 +202,28 @@
       isOpenState = data.isOpen;
       updateStatusUI(isOpenState);
       
-      renderOrders(data.orders || []);
+      const orders = data.orders || [];
+      
+      // 檢查新訂單並觸發語音/出單
+      if (!isFirstLoad) {
+        orders.forEach(order => {
+          if (!existingOrderIds.has(order.orderId)) {
+            // 💡 已修改：僅播報「你有新訂單！訂單編號 #X」
+            const cleanOrderId = order.orderId.replace('#', '');
+            speakText(`你有新訂單！訂單編號 ${cleanOrderId}`);
+
+            if (printCharacteristic) {
+              printOrder(order);
+            }
+          }
+        });
+      }
+
+      // 更新目前單號列表
+      existingOrderIds = new Set(orders.map(o => o.orderId));
+      isFirstLoad = false;
+
+      renderOrders(orders);
       
       if (data.menu) {
         menuList = data.menu;
@@ -112,21 +235,7 @@
     }
   }
 
-  // 2. 切換檢視視圖 (訂單 / 菜單)
-  function switchView(viewName) {
-    document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-    if (viewName === 'orders') {
-      document.querySelectorAll('.nav-tab')[0].classList.add('active');
-      document.getElementById('orders-view').style.display = 'block';
-      document.getElementById('menu-view').style.display = 'none';
-    } else {
-      document.querySelectorAll('.nav-tab')[1].classList.add('active');
-      document.getElementById('orders-view').style.display = 'none';
-      document.getElementById('menu-view').style.display = 'block';
-    }
-  }
-
-  // 3. 渲染訂單卡片
+  // 5. 渲染訂單卡片
   function renderOrders(orders) {
     const container = document.getElementById("orders-container");
     container.innerHTML = "";
@@ -137,9 +246,8 @@
     }
 
     orders.forEach(order => {
-      const isDoing = (order.spice === "製作中"); // 可以作為製作中狀態標記
       const card = document.createElement("div");
-      card.className = `order-card ${isDoing ? 'doing' : ''}`;
+      card.className = "order-card";
       
       card.innerHTML = `
         <div class="order-header">
@@ -151,6 +259,7 @@
         <div class="items-box">${order.itemsDetail}</div>
         ${order.remark ? `<div class="order-info" style="color:#ff4757;">📝 備註：${order.remark}</div>` : ''}
         <div class="order-actions">
+          <button class="action-btn btn-print" onclick='printOrder(${JSON.stringify(order)})'>🖨️ 補印單據</button>
           <button class="action-btn btn-finish" onclick="updateOrderStatus(${order.row}, '已完成')">✅ 完成出餐</button>
         </div>
       `;
@@ -158,7 +267,7 @@
     });
   }
 
-  // 4. 渲染菜單管理清單 (上下架/改價)
+  // 6. 渲染菜單管理
   function renderMenuMgmt() {
     const tbody = document.getElementById("menu-mgmt-body");
     tbody.innerHTML = "";
@@ -189,7 +298,7 @@
     });
   }
 
-  // 5. 設定品項「售完 / 有貨」
+  // 設定品項售完/有貨
   async function toggleItemStock(rowIndex, newStatus) {
     try {
       await fetch(GAS_URL, {
@@ -197,13 +306,13 @@
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: "updateItemStatus", rowIndex: rowIndex, status: newStatus })
       });
-      fetchKitchenData(); // 重新整理
+      fetchKitchenData();
     } catch (err) {
-      alert("⚠️ 更新失敗，請檢查網路！");
+      alert("⚠️ 更新失敗！");
     }
   }
 
-  // 6. 設定品項「價格」
+  // 修改價格
   async function updatePrice(rowIndex, newPrice) {
     try {
       await fetch(GAS_URL, {
@@ -211,14 +320,14 @@
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: "updateItemPrice", rowIndex: rowIndex, price: newPrice })
       });
-      alert("💰 價格已更新完畢！");
+      alert("💰 價格已更新！");
       fetchKitchenData();
     } catch (err) {
-      alert("⚠️ 價格更新失敗！");
+      alert("⚠️ 更新失敗！");
     }
   }
 
-  // 7. 完成訂單
+  // 完成訂單
   async function updateOrderStatus(row, status) {
     try {
       await fetch(GAS_URL, {
@@ -232,7 +341,7 @@
     }
   }
 
-  // 8. 開關營業狀態
+  // 開關營業
   async function toggleStoreStatus() {
     const nextStatus = !isOpenState;
     try {
@@ -244,7 +353,7 @@
       isOpenState = nextStatus;
       updateStatusUI(isOpenState);
     } catch (err) {
-      alert("⚠️ 無法切換營業狀態！");
+      alert("⚠️ 切換失敗！");
     }
   }
 
@@ -259,9 +368,22 @@
     }
   }
 
-  // 每 15 秒自動輪詢刷新訂單與菜單
+  function switchView(viewName) {
+    document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+    if (viewName === 'orders') {
+      document.querySelectorAll('.nav-tab')[0].classList.add('active');
+      document.getElementById('orders-view').style.display = 'block';
+      document.getElementById('menu-view').style.display = 'none';
+    } else {
+      document.querySelectorAll('.nav-tab')[1].classList.add('active');
+      document.getElementById('orders-view').style.display = 'none';
+      document.getElementById('menu-view').style.display = 'block';
+    }
+  }
+
+  // 自動每 10 秒刷新一次
   fetchKitchenData();
-  setInterval(fetchKitchenData, 15000);
+  setInterval(fetchKitchenData, 10000);
 </script>
 
 </body>
