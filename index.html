@@ -11,6 +11,8 @@
     .header { text-align: center; background: #e67e22; color: white; padding: 15px; border-radius: 10px; margin-bottom: 12px; }
     .header h1 { margin: 0; font-size: 22px; }
     
+    /* 📢 動態長假 / 店休公告 */
+    .holiday-notice { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 8px; margin-bottom: 12px; font-size: 14px; font-weight: bold; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: none; }
     .status-banner { background: #dc3545; color: white; text-align: center; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 15px; display: none; }
 
     /* 動態頁籤 */
@@ -29,7 +31,7 @@
     
     .badge { position: absolute; top: -6px; right: -6px; background: #e67e22; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
-    /* 已點購物車明細預覽 */
+    /* 🛒 已點購物車明細預覽 */
     .cart-summary { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .cart-summary h3 { margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; color: #333; display: flex; justify-content: space-between; align-items: center; }
     .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; font-size: 14px; }
@@ -37,7 +39,6 @@
     .cart-item-name { font-weight: bold; color: #333; }
     .cart-item-price { color: #888; font-size: 13px; }
     
-    /* 購物車數量加減按鈕控制區 */
     .cart-controls { display: flex; align-items: center; gap: 6px; }
     .cart-btn-qty { background: #e67e22; color: white; border: none; border-radius: 4px; width: 26px; height: 26px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .cart-btn-qty:active { background: #d35400; }
@@ -76,6 +77,9 @@
   <h1>🍗 阿力香雞排 - 崑山店</h1>
 </div>
 
+<!-- 📢 店休 / 長假動態公告區 -->
+<div id="holiday-notice" class="holiday-notice"></div>
+
 <div id="status-banner" class="status-banner">⚠️ 本店目前公休 / 暫停接單中</div>
 
 <!-- 頁籤區域 -->
@@ -86,7 +90,7 @@
 <!-- 菜單區域 -->
 <div class="menu-section" id="menu-container"></div>
 
-<!-- 🛒 購物車明細清單（支援加減數量與整項清除） -->
+<!-- 🛒 購物車明細清單 -->
 <div class="cart-summary" id="cart-summary-box" style="display: none;">
   <h3>🛒 已選餐點明細 <button style="font-size: 12px; background: none; border: none; color: #dc3545; cursor: pointer;" onclick="clearCart()">清空購物車</button></h3>
   <div id="cart-items-list"></div>
@@ -122,7 +126,7 @@
   <button id="submit-btn" class="submit-btn" onclick="submitOrder()">確認送出訂單</button>
 </div>
 
-<!-- 客製化選擇彈窗 (針對雞排切法/雞排與薯條專屬調味) -->
+<!-- 客製化彈窗 -->
 <div class="modal-overlay" id="custom-modal">
   <div class="modal-content">
     <div class="modal-title" id="modal-item-name">品項名稱</div>
@@ -150,6 +154,15 @@
       
       isOpenState = data.isOpen;
       updateStatusUI(isOpenState);
+
+      // 動態更新長假/店休公告
+      const annBox = document.getElementById("holiday-notice");
+      if (data.announcement && data.announcement.trim() !== "") {
+        annBox.innerText = "📢 " + data.announcement;
+        annBox.style.display = "block";
+      } else {
+        annBox.style.display = "none";
+      }
 
       if (data.menu && data.menu.length > 0) {
         rawMenuData = data.menu;
@@ -295,13 +308,11 @@
     updateCartUI();
   }
 
-  // 增加購物車項目數量
   function increaseCartItem(index) {
     cart[index].qty += 1;
     updateCartUI();
   }
 
-  // 減少購物車項目數量 (扣到 0 自動移除)
   function decreaseCartItem(index) {
     if (cart[index].qty > 1) {
       cart[index].qty -= 1;
@@ -311,13 +322,11 @@
     updateCartUI();
   }
 
-  // 直接移除整個項目
   function removeCartItem(index) {
     cart.splice(index, 1);
     updateCartUI();
   }
 
-  // 清空購物車
   function clearCart() {
     if (confirm("確定要清空購物車嗎？")) {
       cart = [];
@@ -325,7 +334,6 @@
     }
   }
 
-  // 更新購物車 UI 及總金額
   function updateCartUI() {
     let total = 0;
     const cartBox = document.getElementById("cart-summary-box");
