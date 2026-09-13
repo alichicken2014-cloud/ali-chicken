@@ -50,6 +50,16 @@
     .stock-out { background-color: #dc3545; }
 
     .price-input { width: 70px; padding: 6px; border: 1px solid #444; background: #1e1e2f; color: white; border-radius: 4px; text-align: center; font-size: 15px; }
+
+    /* 公告設定樣式 */
+    .announcement-card { background: #27293d; padding: 20px; border-radius: 10px; max-width: 600px; margin: 0 auto; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 6px; color: #ff8c00; }
+    .form-control { width: 100%; padding: 10px; background: #1e1e2f; border: 1px solid #3f4260; color: white; border-radius: 6px; font-size: 15px; }
+    .form-control:focus { border-color: #ff8c00; outline: none; }
+    .date-range-group { display: flex; gap: 10px; align-items: center; }
+    .btn-save-announcement { width: 100%; padding: 12px; background: #ff8c00; border: none; border-radius: 6px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
+    .btn-save-announcement:hover { background: #e07b00; }
   </style>
 </head>
 <body>
@@ -71,6 +81,7 @@
 <div class="nav-tabs">
   <div class="nav-tab active" onclick="switchView('orders')">📋 即時訂單看板</div>
   <div class="nav-tab" onclick="switchView('menu')">🍱 菜單上下架 / 價格修改</div>
+  <div class="nav-tab" onclick="switchView('announcement')">📣 店休 / 公告設定</div>
 </div>
 
 <!-- 視圖 1：即時訂單區 -->
@@ -96,6 +107,38 @@
       <tr><td colspan="5">正在載入菜單...</td></tr>
     </tbody>
   </table>
+</div>
+
+<!-- 視圖 3：店休/長假公告設定區 -->
+<div id="announcement-view" style="display: none;">
+  <div class="announcement-card">
+    <h2 style="margin-top:0; color:#ff8c00;">📣 顧客端公告 Banner 設定</h2>
+    
+    <div class="form-group">
+      <label for="announcement-type">公告類型</label>
+      <select id="announcement-type" class="form-control" onchange="toggleAnnouncementFields()">
+        <option value="none">正常營業（無公告）</option>
+        <option value="single">臨時店休公告</option>
+        <option value="vacation">長假/連假公休公告</option>
+      </select>
+    </div>
+
+    <div id="vacation-dates-group" class="form-group" style="display: none;">
+      <label>長假起訖日期</label>
+      <div class="date-range-group">
+        <input type="date" id="vacation-start" class="form-control">
+        <span>至</span>
+        <input type="date" id="vacation-end" class="form-control">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="announcement-msg">公告內容 / 原因說明</label>
+      <textarea id="announcement-msg" class="form-control" rows="3" placeholder="例如：設備維修臨時公休一日 / 春節連假公休，祝大家新年快樂！"></textarea>
+    </div>
+
+    <button class="btn-save-announcement" onclick="saveAnnouncement()">💾 儲存並同步至點餐系統</button>
+  </div>
 </div>
 
 <script>
@@ -165,7 +208,7 @@
     const encoder = new TextEncoder();
     let content = "";
     content += "==============================\n";
-    content += "   阿力香雞排 崑山店 點餐單   \n";
+    content += "    阿力香雞排 崑山店 點餐單    \n";
     content += "==============================\n";
     content += `單號：${order.orderId}\n`;
     content += `時間：${order.orderTime}\n`;
@@ -208,7 +251,6 @@
       if (!isFirstLoad) {
         orders.forEach(order => {
           if (!existingOrderIds.has(order.orderId)) {
-            // 💡 已修改：僅播報「你有新訂單！訂單編號 #X」
             const cleanOrderId = order.orderId.replace('#', '');
             speakText(`你有新訂單！訂單編號 ${cleanOrderId}`);
 
@@ -217,6 +259,11 @@
             }
           }
         });
+      }
+
+      // 首次載入時順便填入公告設定
+      if (isFirstLoad && data.announcement) {
+        renderAnnouncementUI(data.announcement);
       }
 
       // 更新目前單號列表
@@ -298,6 +345,47 @@
     });
   }
 
+  // 7. 公告控制邏輯
+  function toggleAnnouncementFields() {
+    const type = document.getElementById('announcement-type').value;
+    const vacationGroup = document.getElementById('vacation-dates-group');
+    if (type === 'vacation') {
+      vacationGroup.style.display = 'block';
+    } else {
+      vacationGroup.style.display = 'none';
+    }
+  }
+
+  function renderAnnouncementUI(ann) {
+    if (!ann) return;
+    document.getElementById('announcement-type').value = ann.type || 'none';
+    document.getElementById('announcement-msg').value = ann.message || '';
+    document.getElementById('vacation-start').value = ann.startDate || '';
+    document.getElementById('vacation-end').value = ann.endDate || '';
+    toggleAnnouncementFields();
+  }
+
+  async function saveAnnouncement() {
+    const type = document.getElementById('announcement-type').value;
+    const message = document.getElementById('announcement-msg').value;
+    const startDate = document.getElementById('vacation-start').value;
+    const endDate = document.getElementById('vacation-end').value;
+
+    try {
+      await fetch(GAS_URL, {
+        method: "POST",
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: "updateAnnouncement",
+          announcement: { type, message, startDate, endDate }
+        })
+      });
+      alert("📢 公告設定儲存成功！");
+    } catch (err) {
+      alert("⚠️ 公告儲存失敗！");
+    }
+  }
+
   // 設定品項售完/有貨
   async function toggleItemStock(rowIndex, newStatus) {
     try {
@@ -370,14 +458,19 @@
 
   function switchView(viewName) {
     document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+    document.getElementById('orders-view').style.display = 'none';
+    document.getElementById('menu-view').style.display = 'none';
+    document.getElementById('announcement-view').style.display = 'none';
+
     if (viewName === 'orders') {
       document.querySelectorAll('.nav-tab')[0].classList.add('active');
       document.getElementById('orders-view').style.display = 'block';
-      document.getElementById('menu-view').style.display = 'none';
-    } else {
+    } else if (viewName === 'menu') {
       document.querySelectorAll('.nav-tab')[1].classList.add('active');
-      document.getElementById('orders-view').style.display = 'none';
       document.getElementById('menu-view').style.display = 'block';
+    } else if (viewName === 'announcement') {
+      document.querySelectorAll('.nav-tab')[2].classList.add('active');
+      document.getElementById('announcement-view').style.display = 'block';
     }
   }
 
