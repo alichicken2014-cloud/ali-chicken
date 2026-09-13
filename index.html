@@ -8,19 +8,25 @@
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; }
     body { background-color: #f8f9fa; margin: 0; padding: 15px; padding-bottom: 110px; }
     
-    .header { text-align: center; background: #e67e22; color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+    .header { text-align: center; background: #e67e22; color: white; padding: 15px; border-radius: 10px; margin-bottom: 12px; }
     .header h1 { margin: 0; font-size: 22px; }
     
     .status-banner { background: #dc3545; color: white; text-align: center; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 15px; display: none; }
-    
-    .category-title { font-size: 18px; font-weight: bold; color: #d35400; margin: 15px 0 8px 0; border-bottom: 2px solid #e67e22; padding-bottom: 4px; }
 
-    .menu-section { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px; }
+    /* 動態頁籤橫向滑動區 */
+    .tab-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 15px; border-bottom: 2px solid #e0e0e0; -webkit-overflow-scrolling: touch; }
+    .tab-btn { padding: 8px 18px; background: #ffffff; border: 1px solid #ccc; border-radius: 20px; font-size: 15px; font-weight: bold; color: #555; white-space: nowrap; cursor: pointer; transition: 0.2s; }
+    .tab-btn.active { background: #e67e22; color: white; border-color: #e67e22; }
+
+    /* 菜單卡片列表區 */
+    .menu-section { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; min-height: 150px; }
     .menu-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 6px; text-align: center; cursor: pointer; position: relative; user-select: none; }
     .menu-card:active { background-color: #ffe6d5; }
-    .menu-card.active { border: 2px solid #e67e22; background-color: #fff9f5; }
+    .menu-card.disabled { background-color: #f0f0f0; border-color: #ddd; opacity: 0.6; cursor: not-allowed; }
     .menu-title { font-size: 15px; font-weight: bold; color: #333; }
     .menu-price { font-size: 14px; color: #e67e22; font-weight: bold; margin-top: 4px; }
+    .sold-out-text { font-size: 13px; color: #dc3545; font-weight: bold; margin-top: 4px; }
+    
     .badge { position: absolute; top: -6px; right: -6px; background: #e67e22; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
     .form-group { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
@@ -46,31 +52,15 @@
 
 <div id="status-banner" class="status-banner">⚠️ 本店目前公休 / 暫停接單中</div>
 
-<!-- 1. 完整菜單列表 -->
-<div class="category-title">🔥 熱門主打</div>
-<div class="menu-section">
-  <div class="menu-card" onclick="toggleItem('香雞排', 75)"><div class="menu-title">香雞排</div><div class="menu-price">$75</div><div class="badge" id="badge-香雞排" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('無骨鹽酥雞(大)', 100)"><div class="menu-title">鹽酥雞(大)</div><div class="menu-price">$100</div><div class="badge" id="badge-無骨鹽酥雞(大)" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('無骨鹽酥雞(小)', 50)"><div class="menu-title">鹽酥雞(小)</div><div class="menu-price">$50</div><div class="badge" id="badge-無骨鹽酥雞(小)" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('魷魚(大)', 100)"><div class="menu-title">魷魚(大)</div><div class="menu-price">$100</div><div class="badge" id="badge-魷魚(大)" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('魷魚(小)', 50)"><div class="menu-title">魷魚(小)</div><div class="menu-price">$50</div><div class="badge" id="badge-魷魚(小)" style="display:none;">0</div></div>
+<!-- 頁籤區域 -->
+<div class="tab-container" id="tab-container">
+  <div class="tab-btn active">菜單讀取中...</div>
 </div>
 
-<div class="category-title">🍟 人氣點心</div>
-<div class="menu-section">
-  <div class="menu-card" onclick="toggleItem('薯条', 30)"><div class="menu-title">薯條</div><div class="menu-price">$30</div><div class="badge" id="badge-薯條" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('波浪薯條', 30)"><div class="menu-title">波浪薯條</div><div class="menu-price">$30</div><div class="badge" id="badge-波浪薯條" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('地瓜薯條', 30)"><div class="menu-title">地瓜薯條</div><div class="menu-price">$30</div><div class="badge" id="badge-地瓜薯條" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('鑫鑫腸', 25)"><div class="menu-title">鑫鑫腸</div><div class="menu-price">$25</div><div class="badge" id="badge-鑫鑫腸" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('甜不辣', 30)"><div class="menu-title">甜不辣</div><div class="menu-price">$30</div><div class="badge" id="badge-甜不辣" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('米血', 20)"><div class="menu-title">米血</div><div class="menu-price">$20</div><div class="badge" id="badge-米血" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('百頁豆腐', 30)"><div class="menu-title">百頁豆腐</div><div class="menu-price">$30</div><div class="badge" id="badge-百頁豆腐" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('花枝丸', 30)"><div class="menu-title">花枝丸</div><div class="menu-price">$30</div><div class="badge" id="badge-花枝丸" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('麥克雞塊', 35)"><div class="menu-title">麥克雞塊</div><div class="menu-price">$35</div><div class="badge" id="badge-麥克雞塊" style="display:none;">0</div></div>
-  <div class="menu-card" onclick="toggleItem('柳葉魚', 35)"><div class="menu-title">柳葉魚</div><div class="menu-price">$35</div><div class="badge" id="badge-柳葉魚" style="display:none;">0</div></div>
-</div>
+<!-- 菜單區域 -->
+<div class="menu-section" id="menu-container"></div>
 
-<!-- 2. 訂購人資訊填寫 -->
+<!-- 訂購人資料 -->
 <div class="form-group">
   <label>👤 訂購人姓名：</label>
   <input type="text" id="cust-name" class="form-control" placeholder="請輸入您的稱呼" />
@@ -79,7 +69,7 @@
   <input type="tel" id="cust-phone" class="form-control" placeholder="請輸入手機號碼 (如: 0912345678)" />
 </div>
 
-<!-- 3. 口味偏好 (調味放在資訊下方) -->
+<!-- 調味與偏好 -->
 <div class="form-group">
   <label>🌶️ 整包調味：</label>
   <div class="radio-group">
@@ -97,61 +87,111 @@
   </div>
 
   <label style="margin-top:15px;">📝 訂單備註：</label>
-  <input type="text" id="cust-remark" class="form-control" placeholder="例：雞排要小辣、甜不辣炸酥一點..." />
+  <input type="text" id="cust-remark" class="form-control" placeholder="例：雞排要切/小辣..." />
 </div>
 
-<!-- 底部結帳列 -->
+<!-- 結帳底部列 -->
 <div class="bottom-bar">
   <div class="total-price">總計：$<span id="total-val">0</span></div>
   <button id="submit-btn" class="submit-btn" onclick="submitOrder()">確認送出訂單</button>
 </div>
 
 <script>
-  // 🔗 您的 Google Apps Script Web App URL
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec";
 
   let cart = {};
+  let rawMenuData = [];
+  let currentCategory = "";
   let isOpenState = true;
 
-  // 檢查營業狀態
-  async function checkStoreStatus() {
+  async function initData() {
     try {
       const res = await fetch(GAS_URL);
       const data = await res.json();
-      isOpenState = data.isOpen;
       
-      const banner = document.getElementById("status-banner");
-      const submitBtn = document.getElementById("submit-btn");
+      isOpenState = data.isOpen;
+      updateStatusUI(isOpenState);
 
-      if (!isOpenState) {
-        banner.style.display = "block";
-        submitBtn.disabled = true;
-        submitBtn.innerText = "今日公休暫停點餐";
-        submitBtn.style.backgroundColor = "#dc3545";
+      if (data.menu && data.menu.length > 0) {
+        rawMenuData = data.menu;
+        renderTabsAndMenu();
       } else {
-        banner.style.display = "none";
-        submitBtn.disabled = false;
-        submitBtn.innerText = "確認送出訂單";
-        submitBtn.style.backgroundColor = "#28a745";
+        document.getElementById("menu-container").innerHTML = "<div style='grid-column:1/-1;text-align:center;'>尚未取得菜單資料，請確認 Google Sheet 資料。</div>";
       }
     } catch (err) {
-      console.warn("無法取得營業狀態:", err);
+      console.error("載入失敗:", err);
     }
   }
 
-  // 點擊選擇餐點 (+1 邏輯)
-  function toggleItem(name, price) {
+  function renderTabsAndMenu() {
+    // 依據表格自動撈出不重複的分類
+    const categories = [...new Set(rawMenuData.map(item => item.category))];
+    const tabContainer = document.getElementById("tab-container");
+    tabContainer.innerHTML = "";
+
+    if (categories.length > 0) {
+      currentCategory = categories[0];
+
+      categories.forEach(cat => {
+        const btn = document.createElement("button");
+        btn.className = `tab-btn ${cat === currentCategory ? 'active' : ''}`;
+        btn.innerText = cat;
+        btn.onclick = () => {
+          currentCategory = cat;
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderMenuCards();
+        };
+        tabContainer.appendChild(btn);
+      });
+
+      renderMenuCards();
+    }
+  }
+
+  function renderMenuCards() {
+    const container = document.getElementById("menu-container");
+    container.innerHTML = "";
+
+    const filteredItems = rawMenuData.filter(item => item.category === currentCategory);
+
+    filteredItems.forEach(item => {
+      const qty = cart[item.name] ? cart[item.name].qty : 0;
+      const card = document.createElement("div");
+
+      if (item.isAvailable) {
+        card.className = `menu-card ${qty > 0 ? 'active' : ''}`;
+        card.onclick = () => addItem(item.name, item.price);
+        card.innerHTML = `
+          <div class="menu-title">${item.name}</div>
+          <div class="menu-price">$${item.price}</div>
+          <div class="badge" id="badge-${item.name}" style="display:${qty > 0 ? 'flex' : 'none'};">${qty}</div>
+        `;
+      } else {
+        // 售完狀態
+        card.className = "menu-card disabled";
+        card.innerHTML = `
+          <div class="menu-title">${item.name}</div>
+          <div class="sold-out-text">已售完</div>
+        `;
+      }
+      container.appendChild(card);
+    });
+  }
+
+  function addItem(name, price) {
     if (!cart[name]) {
       cart[name] = { price: price, qty: 1 };
     } else {
       cart[name].qty += 1;
     }
-    updateUI();
+    updateTotalAndBadges();
   }
 
-  function updateUI() {
+  function updateTotalAndBadges() {
     let total = 0;
     for (const [name, item] of Object.entries(cart)) {
+      total += item.price * item.qty;
       const badge = document.getElementById(`badge-${name}`);
       if (badge) {
         if (item.qty > 0) {
@@ -161,12 +201,27 @@
           badge.style.display = "none";
         }
       }
-      total += item.price * item.qty;
     }
     document.getElementById("total-val").innerText = total;
   }
 
-  // 送出訂單
+  function updateStatusUI(isOpen) {
+    const banner = document.getElementById("status-banner");
+    const submitBtn = document.getElementById("submit-btn");
+
+    if (!isOpen) {
+      banner.style.display = "block";
+      submitBtn.disabled = true;
+      submitBtn.innerText = "今日公休暫停點餐";
+      submitBtn.style.backgroundColor = "#dc3545";
+    } else {
+      banner.style.display = "none";
+      submitBtn.disabled = false;
+      submitBtn.innerText = "確認送出訂單";
+      submitBtn.style.backgroundColor = "#28a745";
+    }
+  }
+
   async function submitOrder() {
     const name = document.getElementById("cust-name").value.trim();
     const phone = document.getElementById("cust-phone").value.trim();
@@ -222,11 +277,12 @@
 
       if (result.status === "closed") {
         alert("⚠️ 本店目前公休 / 暫停接單中，暫不接受線上點餐，敬請見諒！");
-        checkStoreStatus();
+        updateStatusUI(false);
       } else if (result.status === "success") {
         alert(`🎉 訂單已成功送出！\n您的取單號碼為：${result.orderId}\n請至現場報號取餐！`);
         cart = {};
-        updateUI();
+        updateTotalAndBadges();
+        renderMenuCards();
         document.getElementById("cust-remark").value = "";
       } else {
         alert("⚠️ 送出失敗：" + (result.message || "系統繁忙，請稍後再試。"));
@@ -243,7 +299,7 @@
     }
   }
 
-  checkStoreStatus();
+  initData();
 </script>
 
 </body>
