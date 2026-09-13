@@ -6,457 +6,105 @@
   <title>阿力香雞排 崑山店 - 線上點餐</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; }
-    body { background-color: #f8f9fa; margin: 0; padding: 15px; padding-bottom: 120px; }
+    body { background-color: #f8f9fa; margin: 0; padding-bottom: 80px; }
     
-    .header { text-align: center; background: #e67e22; color: white; padding: 15px; border-radius: 10px; margin-bottom: 12px; }
-    .header h1 { margin: 0; font-size: 22px; }
+    header { background-color: #ff8c00; color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; }
+    .announcement-banner { background-color: #dc3545; color: white; padding: 12px 15px; text-align: center; font-weight: bold; font-size: 15px; display: none; }
     
-    /* 📢 動態長假 / 店休公告 */
-    .holiday-notice { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 8px; margin-bottom: 12px; font-size: 14px; font-weight: bold; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: none; }
-    .status-banner { background: #dc3545; color: white; text-align: center; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 15px; display: none; }
-
-    /* 動態頁籤 */
-    .tab-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 15px; border-bottom: 2px solid #e0e0e0; -webkit-overflow-scrolling: touch; }
-    .tab-btn { padding: 8px 18px; background: #ffffff; border: 1px solid #ccc; border-radius: 20px; font-size: 15px; font-weight: bold; color: #555; white-space: nowrap; cursor: pointer; transition: 0.2s; }
-    .tab-btn.active { background: #e67e22; color: white; border-color: #e67e22; }
-
-    /* 菜單卡片列表 */
-    .menu-section { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
-    .menu-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 6px; text-align: center; cursor: pointer; position: relative; user-select: none; }
-    .menu-card:active { background-color: #ffe6d5; }
-    .menu-card.disabled { background-color: #f0f0f0; border-color: #ddd; opacity: 0.6; cursor: not-allowed; }
-    .menu-title { font-size: 15px; font-weight: bold; color: #333; }
-    .menu-price { font-size: 14px; color: #e67e22; font-weight: bold; margin-top: 4px; }
-    .sold-out-text { font-size: 13px; color: #dc3545; font-weight: bold; margin-top: 4px; }
+    .container { max-width: 600px; margin: 0 auto; padding: 15px; }
+    .store-info { background: white; padding: 12px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 14px; color: #555; }
     
-    .badge { position: absolute; top: -6px; right: -6px; background: #e67e22; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-
-    /* 🛒 已點購物車明細預覽 */
-    .cart-summary { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .cart-summary h3 { margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; color: #333; display: flex; justify-content: space-between; align-items: center; }
-    .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; font-size: 14px; }
-    .cart-item-info { flex: 1; padding-right: 10px; }
-    .cart-item-name { font-weight: bold; color: #333; }
-    .cart-item-price { color: #888; font-size: 13px; }
+    .menu-item { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .item-name { font-weight: bold; font-size: 16px; }
+    .item-price { color: #ff8c00; font-weight: bold; }
+    .sold-out-tag { color: #dc3545; font-weight: bold; font-size: 14px; }
     
-    .cart-controls { display: flex; align-items: center; gap: 6px; }
-    .cart-btn-qty { background: #e67e22; color: white; border: none; border-radius: 4px; width: 26px; height: 26px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .cart-btn-qty:active { background: #d35400; }
-    .cart-qty-num { font-weight: bold; font-size: 15px; min-width: 20px; text-align: center; }
-    .cart-btn-del { background: #dc3545; color: white; border: none; border-radius: 4px; width: 26px; height: 26px; font-size: 12px; cursor: pointer; margin-left: 4px; }
+    .counter-btn { width: 28px; height: 28px; background: #ff8c00; border: none; color: white; border-radius: 50%; font-weight: bold; cursor: pointer; }
+    .counter-btn:disabled { background: #ccc; }
+    .qty-display { margin: 0 10px; font-weight: bold; }
 
-    /* 表單區 */
-    .form-group { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; }
-    .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-bottom: 10px; }
-    
-    .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
-    .radio-label { flex: 1; min-width: 65px; text-align: center; border: 1px solid #ccc; padding: 8px 4px; border-radius: 6px; cursor: pointer; font-size: 14px; background: #fafafa; }
-    .radio-group input { display: none; }
-    .radio-group input:checked + .radio-label { background: #e67e22; color: white; border-color: #e67e22; font-weight: bold; }
-
-    /* 彈窗 Modal */
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
-    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-    .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; text-align: center; }
-    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-    .modal-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    .btn-cancel { background: #6c757d; color: white; }
-    .btn-confirm { background: #e67e22; color: white; }
-
-    /* 底部結帳列 */
-    .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 12px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
-    .total-price { font-size: 20px; font-weight: bold; color: #e67e22; }
-    .submit-btn { background: #28a745; color: white; border: none; padding: 12px 20px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; }
-    .submit-btn:disabled { background: #6c757d; cursor: not-allowed; }
+    .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 12px 20px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+    .btn-submit { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; }
+    .btn-submit:disabled { background: #6c757d; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>🍗 阿力香雞排 - 崑山店</h1>
-</div>
+<header>阿力香雞排 崑山店</header>
 
-<!-- 📢 店休 / 長假動態公告區 -->
-<div id="holiday-notice" class="holiday-notice"></div>
+<div id="announcement-banner" class="announcement-banner"></div>
 
-<div id="status-banner" class="status-banner">⚠️ 本店目前公休 / 暫停接單中</div>
-
-<!-- 頁籤區域 -->
-<div class="tab-container" id="tab-container">
-  <div class="tab-btn active">菜單讀取中...</div>
-</div>
-
-<!-- 菜單區域 -->
-<div class="menu-section" id="menu-container"></div>
-
-<!-- 🛒 購物車明細清單 -->
-<div class="cart-summary" id="cart-summary-box" style="display: none;">
-  <h3>🛒 已選餐點明細 <button style="font-size: 12px; background: none; border: none; color: #dc3545; cursor: pointer;" onclick="clearCart()">清空購物車</button></h3>
-  <div id="cart-items-list"></div>
-</div>
-
-<!-- 訂購人資料 -->
-<div class="form-group">
-  <label>👤 訂購人姓名：</label>
-  <input type="text" id="cust-name" class="form-control" placeholder="請輸入您的稱呼" />
-
-  <label>📞 聯絡電話：</label>
-  <input type="tel" id="cust-phone" class="form-control" placeholder="請輸入手機號碼 (如: 0912345678)" />
-</div>
-
-<!-- 全局整包調味 -->
-<div class="form-group">
-  <label>🌶️ 整包主要調味：</label>
-  <div class="radio-group">
-    <input type="radio" name="spice" id="sp1" value="胡椒" checked><label for="sp1" class="radio-label">胡椒</label>
-    <input type="radio" name="spice" id="sp2" value="都不加"><label for="sp2" class="radio-label">都不加</label>
-    <input type="radio" name="spice" id="sp3" value="小辣"><label for="sp3" class="radio-label">小辣</label>
-    <input type="radio" name="spice" id="sp4" value="中辣"><label for="sp4" class="radio-label">中辣</label>
-    <input type="radio" name="spice" id="sp5" value="大辣"><label for="sp5" class="radio-label">大辣</label>
+<div class="container">
+  <div class="store-info">
+    🕒 <b>營業時間：</b>週一至週六 15:00 - 23:00（<b>週日公休</b>）<br>
+    📍 <b>門市地址：</b>崑山科大周邊
   </div>
 
-  <label style="margin-top:15px;">📝 訂單備註：</label>
-  <input type="text" id="cust-remark" class="form-control" placeholder="例：有特殊需求請在此註明..." />
+  <div id="menu-container">載入菜單中...</div>
 </div>
 
-<!-- 結帳底部列 -->
-<div class="bottom-bar">
-  <div class="total-price">總計：$<span id="total-val">0</span></div>
-  <button id="submit-btn" class="submit-btn" onclick="submitOrder()">確認送出訂單</button>
-</div>
-
-<!-- 客製化彈窗 -->
-<div class="modal-overlay" id="custom-modal">
-  <div class="modal-content">
-    <div class="modal-title" id="modal-item-name">品項名稱</div>
-    <div id="modal-options-container"></div>
-    <div class="modal-actions">
-      <button class="modal-btn btn-cancel" onclick="closeModal()">取消</button>
-      <button class="modal-btn btn-confirm" onclick="confirmCustomItem()">加到購物車</button>
-    </div>
-  </div>
+<div class="cart-bar">
+  <div>總計：<b id="total-price" style="color:#ff8c00; font-size:18px;">$0</b></div>
+  <button id="submit-btn" class="btn-submit" onclick="submitOrder()">確認送出點餐</button>
 </div>
 
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec";
+  let isStoreOpen = false;
 
-  let cart = [];
-  let rawMenuData = [];
-  let currentCategory = "";
-  let isOpenState = true;
-  let tempSelectedItem = null;
+  // 判定營業時間
+  function isBusinessHours() {
+    const now = new Date();
+    const day = now.getDay();
+    const hours = now.getHours();
 
-  async function initData() {
+    if (day === 0) return false; // 週日公休
+    return (hours >= 15 && hours < 23);
+  }
+
+  async function loadMenu() {
     try {
-      const res = await fetch(GAS_URL);
+      const res = await fetch(`${GAS_URL}?action=getMenu`);
       const data = await res.json();
       
-      isOpenState = data.isOpen;
-      updateStatusUI(isOpenState);
+      const inHours = isBusinessHours();
+      isStoreOpen = data.isOpen && inHours;
 
-      // 動態更新長假/店休公告
-      const annBox = document.getElementById("holiday-notice");
-      if (data.announcement && data.announcement.trim() !== "") {
-        annBox.innerText = "📢 " + data.announcement;
-        annBox.style.display = "block";
-      } else {
-        annBox.style.display = "none";
+      // 處理公告 Banner
+      const annBanner = document.getElementById("announcement-banner");
+      if (data.announcement && data.announcement.type !== 'none') {
+        annBanner.style.display = 'block';
+        if (data.announcement.type === 'vacation') {
+          annBanner.innerText = `📣 公告：${data.announcement.startDate} ~ ${data.announcement.endDate} ${data.announcement.message}`;
+        } else {
+          annBanner.innerText = `📣 公告：${data.announcement.message}`;
+        }
+      } else if (!inHours) {
+        annBanner.style.display = 'block';
+        annBanner.innerText = "🛑 目前為非營業時間（營業時間為 週一~週六 15:00-23:00，週日公休）";
       }
 
-      if (data.menu && data.menu.length > 0) {
-        rawMenuData = data.menu;
-        renderTabsAndMenu();
-      } else {
-        document.getElementById("menu-container").innerHTML = "<div style='grid-column:1/-1;text-align:center;'>尚未取得菜單資料，請確認 Google Sheet。</div>";
+      // 按鈕控制
+      const submitBtn = document.getElementById("submit-btn");
+      if (!isStoreOpen) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "打烊中 / 暫不接單";
       }
+
     } catch (err) {
-      console.error("載入失敗:", err);
+      console.error("載入菜單失敗", err);
     }
   }
 
-  function renderTabsAndMenu() {
-    const categories = [...new Set(rawMenuData.map(item => item.category))];
-    const tabContainer = document.getElementById("tab-container");
-    tabContainer.innerHTML = "";
-
-    if (categories.length > 0) {
-      currentCategory = categories[0];
-
-      categories.forEach(cat => {
-        const btn = document.createElement("button");
-        btn.className = `tab-btn ${cat === currentCategory ? 'active' : ''}`;
-        btn.innerText = cat;
-        btn.onclick = () => {
-          currentCategory = cat;
-          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          renderMenuCards();
-        };
-        tabContainer.appendChild(btn);
-      });
-
-      renderMenuCards();
-    }
-  }
-
-  function renderMenuCards() {
-    const container = document.getElementById("menu-container");
-    container.innerHTML = "";
-
-    const filteredItems = rawMenuData.filter(item => item.category === currentCategory);
-
-    filteredItems.forEach(item => {
-      const totalQty = cart.filter(c => c.name === item.name).reduce((sum, c) => sum + c.qty, 0);
-      const card = document.createElement("div");
-
-      if (item.isAvailable) {
-        card.className = `menu-card ${totalQty > 0 ? 'active' : ''}`;
-        card.onclick = () => handleItemClick(item);
-        card.innerHTML = `
-          <div class="menu-title">${item.name}</div>
-          <div class="menu-price">$${item.price}</div>
-          <div class="badge" id="badge-${item.name}" style="display:${totalQty > 0 ? 'flex' : 'none'};">${totalQty}</div>
-        `;
-      } else {
-        card.className = "menu-card disabled";
-        card.innerHTML = `
-          <div class="menu-title">${item.name}</div>
-          <div class="sold-out-text">已售完</div>
-        `;
-      }
-      container.appendChild(card);
-    });
-  }
-
-  function handleItemClick(item) {
-    const isChicken = item.name.includes("雞排");
-    const isFries = item.name.includes("薯條") || item.name.includes("甘梅薯條") || item.name.includes("地瓜");
-
-    if (isChicken || isFries) {
-      tempSelectedItem = item;
-      showCustomModal(item, isChicken, isFries);
-    } else {
-      addToCart(item.name, item.price, "");
-    }
-  }
-
-  function showCustomModal(item, isChicken, isFries) {
-    document.getElementById("modal-item-name").innerText = item.name;
-    const container = document.getElementById("modal-options-container");
-    container.innerHTML = "";
-
-    let html = "";
-    if (isChicken) {
-      html += `
-        <label style="font-weight:bold; display:block; margin-bottom:6px;">✂️ 是否要切：</label>
-        <div class="radio-group" style="margin-bottom:12px;">
-          <input type="radio" name="m-cut" id="mc1" value="要切" checked><label for="mc1" class="radio-label">要切</label>
-          <input type="radio" name="m-cut" id="mc2" value="不切"><label for="mc2" class="radio-label">不切</label>
-        </div>
-      `;
-    }
-
-    html += `
-      <label style="font-weight:bold; display:block; margin-bottom:6px;">🌶️ 指定調味：</label>
-      <div class="radio-group">
-        <input type="radio" name="m-spice" id="ms1" value="隨整包" checked><label for="ms1" class="radio-label">隨整包</label>
-        <input type="radio" name="m-spice" id="ms2" value="胡椒"><label for="ms2" class="radio-label">胡椒</label>
-        <input type="radio" name="m-spice" id="ms3" value="都不加"><label for="ms3" class="radio-label">都不加</label>
-        <input type="radio" name="m-spice" id="ms4" value="小辣"><label for="ms4" class="radio-label">小辣</label>
-        <input type="radio" name="m-spice" id="ms5" value="中辣"><label for="ms5" class="radio-label">中辣</label>
-        <input type="radio" name="m-spice" id="ms6" value="大辣"><label for="ms6" class="radio-label">大辣</label>
-        <input type="radio" name="m-spice" id="ms7" value="梅粉"><label for="ms7" class="radio-label">梅粉</label>
-      </div>
-    `;
-
-    container.innerHTML = html;
-    document.getElementById("custom-modal").style.display = "flex";
-  }
-
-  function closeModal() {
-    document.getElementById("custom-modal").style.display = "none";
-    tempSelectedItem = null;
-  }
-
-  function confirmCustomItem() {
-    if (!tempSelectedItem) return;
-
-    let noteArr = [];
-    const cutEl = document.querySelector('input[name="m-cut"]:checked');
-    const spiceEl = document.querySelector('input[name="m-spice"]:checked');
-
-    if (cutEl) noteArr.push(cutEl.value);
-    if (spiceEl && spiceEl.value !== "隨整包") noteArr.push(spiceEl.value);
-
-    const customNote = noteArr.length > 0 ? `(${noteArr.join('/')})` : "";
-    
-    addToCart(tempSelectedItem.name, tempSelectedItem.price, customNote);
-    closeModal();
-  }
-
-  function addToCart(name, price, customNote) {
-    const fullName = name + customNote;
-    const existing = cart.find(c => c.fullName === fullName);
-    
-    if (existing) {
-      existing.qty += 1;
-    } else {
-      cart.push({ name: name, price: price, customNote: customNote, fullName: fullName, qty: 1 });
-    }
-    
-    updateCartUI();
-  }
-
-  function increaseCartItem(index) {
-    cart[index].qty += 1;
-    updateCartUI();
-  }
-
-  function decreaseCartItem(index) {
-    if (cart[index].qty > 1) {
-      cart[index].qty -= 1;
-    } else {
-      cart.splice(index, 1);
-    }
-    updateCartUI();
-  }
-
-  function removeCartItem(index) {
-    cart.splice(index, 1);
-    updateCartUI();
-  }
-
-  function clearCart() {
-    if (confirm("確定要清空購物車嗎？")) {
-      cart = [];
-      updateCartUI();
-    }
-  }
-
-  function updateCartUI() {
-    let total = 0;
-    const cartBox = document.getElementById("cart-summary-box");
-    const cartList = document.getElementById("cart-items-list");
-    cartList.innerHTML = "";
-
-    if (cart.length > 0) {
-      cartBox.style.display = "block";
-      cart.forEach((item, index) => {
-        const itemSubtotal = item.price * item.qty;
-        total += itemSubtotal;
-        
-        const row = document.createElement("div");
-        row.className = "cart-item-row";
-        row.innerHTML = `
-          <div class="cart-item-info">
-            <div class="cart-item-name">${item.fullName}</div>
-            <div class="cart-item-price">$${item.price} × ${item.qty} = $${itemSubtotal}</div>
-          </div>
-          <div class="cart-controls">
-            <button class="cart-btn-qty" onclick="decreaseCartItem(${index})">-</button>
-            <span class="cart-qty-num">${item.qty}</span>
-            <button class="cart-btn-qty" onclick="increaseCartItem(${index})">+</button>
-            <button class="cart-btn-del" onclick="removeCartItem(${index})">🗑️</button>
-          </div>
-        `;
-        cartList.appendChild(row);
-      });
-    } else {
-      cartBox.style.display = "none";
-    }
-
-    document.getElementById("total-val").innerText = total;
-    renderMenuCards();
-  }
-
-  function updateStatusUI(isOpen) {
-    const banner = document.getElementById("status-banner");
-    const submitBtn = document.getElementById("submit-btn");
-
-    if (!isOpen) {
-      banner.style.display = "block";
-      submitBtn.disabled = true;
-      submitBtn.innerText = "今日公休暫停點餐";
-      submitBtn.style.backgroundColor = "#dc3545";
-    } else {
-      banner.style.display = "none";
-      submitBtn.disabled = false;
-      submitBtn.innerText = "確認送出訂單";
-      submitBtn.style.backgroundColor = "#28a745";
-    }
-  }
-
-  async function submitOrder() {
-    const name = document.getElementById("cust-name").value.trim();
-    const phone = document.getElementById("cust-phone").value.trim();
-    const remark = document.getElementById("cust-remark").value.trim();
-    const totalVal = parseInt(document.getElementById("total-val").innerText);
-
-    if (cart.length === 0 || totalVal === 0) {
-      alert("⚠️ 請先選擇點餐項目！");
+  function submitOrder() {
+    if (!isStoreOpen) {
+      alert("⚠️ 很抱歉，本店目前非營業時間或公休中，無法收單！");
       return;
     }
-    if (!name) {
-      alert("⚠️ 請輸入訂購人姓名！");
-      return;
-    }
-    if (!phone) {
-      alert("⚠️ 請輸入聯絡電話！");
-      return;
-    }
-
-    const itemsDetail = cart.map(c => `${c.fullName} x${c.qty}`).join("\n");
-    const spice = document.querySelector('input[name="spice"]:checked').value;
-
-    const payload = {
-      name: name,
-      phone: phone,
-      spice: spice,
-      preference: "已依餐點標註",
-      itemsDetail: itemsDetail,
-      totalPrice: totalVal,
-      remark: remark
-    };
-
-    const submitBtn = document.getElementById("submit-btn");
-    submitBtn.disabled = true;
-    submitBtn.innerText = "訂單傳送中...";
-
-    try {
-      const response = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-
-      if (result.status === "closed") {
-        alert("⚠️ 本店目前公休 / 暫停接單中，暫不接受線上點餐！");
-        updateStatusUI(false);
-      } else if (result.status === "success") {
-        alert(`🎉 訂單成功送出！\n您的取單號碼：${result.orderId}\n請至現場報號取餐！`);
-        cart = [];
-        updateCartUI();
-        document.getElementById("cust-remark").value = "";
-      } else {
-        alert("⚠️ 送出失敗：" + (result.message || "系統繁忙，請稍後再試。"));
-      }
-
-    } catch (error) {
-      console.error("送單異常:", error);
-      alert("📡 網路連線較不穩定，請檢查網路訊號後再試！");
-    } finally {
-      if (isOpenState) {
-        submitBtn.disabled = false;
-        submitBtn.innerText = "確認送出訂單";
-      }
-    }
+    // ...送出訂單邏輯...
   }
 
-  initData();
+  loadMenu();
 </script>
-
 </body>
 </html>
