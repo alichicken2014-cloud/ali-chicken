@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>阿力香雞排 崑山店 - 廚房與菜單管理系統</title>
+  
+  <!-- 💡 引入編碼轉換庫，解決熱感應出單機列印中文亂碼問題 -->
+  <script src="https://cdn.jsdelivr.net/npm/text-encoding-index@1.0.2/encoding-indexes.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/text-encoding-index@1.0.2/encoding.js"></script>
+
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; }
     body { background-color: #1e1e2f; color: #ffffff; margin: 0; padding: 15px; }
@@ -151,17 +156,16 @@
   let printCharacteristic = null;
   let isFirstLoad = true;
 
-  // 0. 自動營業時間判定邏輯（週一至週六 15:00 ~ 23:00）
+  // 判斷營業時間（週一至週六 15:00 ~ 23:00）
   function checkAutoBusinessHours() {
     const now = new Date();
-    const day = now.getDay(); // 0 是週日, 1-6 是週一至週六
+    const day = now.getDay();
     const hours = now.getHours();
-
     if (day === 0) return false; // 週日固定公休
     return (hours >= 15 && hours < 23);
   }
 
-  // 1. 語音播報功能
+  // 1. 語音播報
   function speakText(text) {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -208,44 +212,71 @@
     }
   }
 
-  // 3. 列印單據格式化
-  async function printOrder(order) {
+  // 3. 解決亂碼與 undefined 的列印出單函式
+  async function printOrder(o) {
     if (!printCharacteristic) {
       alert("⚠️ 請先點擊「連接藍牙出單機」！");
       return;
     }
 
-    const encoder = new TextEncoder();
-    let content = "";
-    content += "==============================\n";
-    content += "    阿力香雞排 崑山店 點餐單    \n";
-    content += "==============================\n";
-    content += `單號：${order.orderId}\n`;
-    content += `時間：${order.orderTime}\n`;
-    content += `姓名：${order.name}\n`;
-    content += `電話：${order.phone}\n`;
-    content += `調味：${order.spice} | 偏好：${order.preference}\n`;
-    content += "------------------------------\n";
-    content += `${order.itemsDetail}\n`;
-    content += "------------------------------\n";
-    if (order.remark) content += `備註：${order.remark}\n`;
-    content += `總金額：$${order.totalPrice} 元\n`;
-    content += "==============================\n\n\n\n";
-
     try {
-      const bytes = encoder.encode(content);
-      const chunkSize = 512;
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.slice(i, i + chunkSize);
-        await printCharacteristic.writeValue(chunk);
+      // 預防變數 undefined
+      const orderId = o.orderId || o.orderNo || "#000";
+      const orderTime = o.orderTime || o.time || "";
+      const name = o.name || "顧客";
+      const phone = o.phone || "";
+      const itemsDetail = o.itemsDetail || "";
+      const remark = o.remark || "";
+      const totalPrice = o.totalPrice || 0;
+
+      let txt = `==============================\n`;
+      txt += `    阿力香雞排 崑山店 點餐單    \n`;
+      txt += `==============================\n`;
+      txt += `單號：${orderId}\n`;
+      txt += `時間：${orderTime}\n`;
+      txt += `姓名：${name}\n`;
+      txt += `電話：${phone}\n`;
+      txt += `------------------------------\n`;
+      txt += `${itemsDetail}\n`;
+      txt += `------------------------------\n`;
+      if (remark && remark !== "無") {
+        txt += `備註：${remark}\n`;
       }
+      txt += `總金額：$${totalPrice} 元\n`;
+      txt += `==============================\n\n\n\n`;
+
+      // 使用 GBK 編碼轉換（解決熱感應紙簡體/繁體亂碼問題）
+      let uint8array;
+      if (typeof TextEncoder !== "undefined" && typeof Encoding !== "undefined") {
+        const encoder = new TextEncoder('gbk', { NONSTANDARD_allowLegacyEncoding: true });
+        uint8array = encoder.encode(txt);
+      } else {
+        uint8array = new TextEncoder().encode(txt);
+      }
+
+      // 初始化印表機指令
+      const initCmd = new Uint8Array([0x1B, 0x40]);
+      await printCharacteristic.writeValue(initCmd);
+
+      // 切片分段傳送 (每區塊 128 bytes)
+      const chunkSize = 128;
+      for (let i = 0; i < uint8array.length; i += chunkSize) {
+        const chunk = uint8array.slice(i, i + chunkSize);
+        await printCharacteristic.writeValue(chunk);
+        await new Promise(resolve => setTimeout(resolve, 40));
+      }
+
+      // 切紙指令
+      const cutCmd = new Uint8Array([0x1D, 0x56, 0x41, 0x00]);
+      await printCharacteristic.writeValue(cutCmd);
+
     } catch (err) {
       console.error("列印失敗:", err);
       alert("⚠️ 列印失敗：" + err.message);
     }
   }
 
-  // 4. 取得看板資料與偵測新訂單
+  // 4. 取得看板資料與新訂單偵測
   async function fetchKitchenData() {
     try {
       const res = await fetch(`${GAS_URL}?action=getKitchenOrders`);
@@ -288,7 +319,7 @@
     }
   }
 
-  // 5. 渲染訂單卡片
+  // 5. 渲染即時訂單卡片
   function renderOrders(orders) {
     const container = document.getElementById("orders-container");
     container.innerHTML = "";
@@ -308,7 +339,6 @@
           <span>$${order.totalPrice}</span>
         </div>
         <div class="order-info">⏰ 時間：${order.orderTime} | 📞 電話：${order.phone}</div>
-        <div class="order-info">🌶️ 調味：<b>${order.spice}</b> | 🌿 切法：<b>${order.preference}</b></div>
         <div class="items-box">${order.itemsDetail}</div>
         ${order.remark ? `<div class="order-info" style="color:#ff4757;">📝 備註：${order.remark}</div>` : ''}
         <div class="order-actions">
@@ -351,11 +381,10 @@
     });
   }
 
-  // 7. 公告控制邏輯
+  // 7. 公告邏輯
   function toggleAnnouncementFields() {
     const type = document.getElementById('announcement-type').value;
-    const vacationGroup = document.getElementById('vacation-dates-group');
-    vacationGroup.style.display = (type === 'vacation') ? 'block' : 'none';
+    document.getElementById('vacation-dates-group').style.display = (type === 'vacation') ? 'block' : 'none';
   }
 
   function renderAnnouncementUI(ann) {
@@ -388,7 +417,6 @@
     }
   }
 
-  // 設定品項售完/有貨
   async function toggleItemStock(rowIndex, newStatus) {
     try {
       await fetch(GAS_URL, {
@@ -402,7 +430,6 @@
     }
   }
 
-  // 修改價格
   async function updatePrice(rowIndex, newPrice) {
     try {
       await fetch(GAS_URL, {
@@ -417,7 +444,6 @@
     }
   }
 
-  // 完成訂單
   async function updateOrderStatus(row, status) {
     try {
       await fetch(GAS_URL, {
@@ -431,7 +457,6 @@
     }
   }
 
-  // 手動開關營業狀態
   async function toggleStoreStatus() {
     const nextStatus = !isOpenState;
     try {
@@ -447,7 +472,6 @@
     }
   }
 
-  // 狀態按鈕 UI 判斷 logic
   function updateStatusUI(isOpen) {
     const btn = document.getElementById("store-status-btn");
     const isAutoOpen = checkAutoBusinessHours();
@@ -486,7 +510,6 @@
     }
   }
 
-  // 自動每 10 秒刷新一次
   fetchKitchenData();
   setInterval(fetchKitchenData, 10000);
 </script>
