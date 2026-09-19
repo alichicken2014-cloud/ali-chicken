@@ -105,42 +105,54 @@
     return (hours >= 15 && hours < 23);
   }
 
-  async function loadMenu() {
-    try {
-      const res = await fetch(`${GAS_URL}?action=getMenu`);
-      const data = await res.json();
-      
-      menuData = data.menu || [];
-      const inHours = isBusinessHours();
-      isStoreOpen = data.isOpen && inHours;
-
-      // 處理公告 Banner
-      const annBanner = document.getElementById("announcement-banner");
-      if (data.announcement && data.announcement.type !== 'none') {
-        annBanner.style.display = 'block';
-        if (data.announcement.type === 'vacation') {
-          annBanner.innerText = `📣 店休公告：${data.announcement.startDate} ~ ${data.announcement.endDate} ${data.announcement.message}`;
-        } else {
-          annBanner.innerText = `📣 店休公告：${data.announcement.message}`;
-        }
-      } else if (!inHours) {
-        annBanner.style.display = 'block';
-        annBanner.innerText = "🛑 本店目前非營業時間（營業時間為 週一~週六 15:00-23:00，週日固定公休）";
-      }
-
-      // 控制提交按鈕
-      const submitBtn = document.getElementById("submit-btn");
-      if (!isStoreOpen) {
-        submitBtn.disabled = true;
-        submitBtn.innerText = "公休/打烊中 暫不接單";
-      }
-
-      renderMenu();
-    } catch (err) {
-      document.getElementById("menu-container").innerText = "⚠️ 菜單載入失敗，請重新整理頁面。";
+ async function loadMenu() {
+  const container = document.getElementById("menu-container");
+  try {
+    const res = await fetch(`${GAS_URL}?action=getMenu`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP 錯誤，狀態碼：${res.status}`);
     }
-  }
 
+    const data = await res.json();
+    
+    menuData = data.menu || [];
+    const inHours = isBusinessHours();
+    isStoreOpen = data.isOpen && inHours;
+
+    // 處理公告 Banner
+    const annBanner = document.getElementById("announcement-banner");
+    if (data.announcement && data.announcement.type !== 'none') {
+      annBanner.style.display = 'block';
+      if (data.announcement.type === 'vacation') {
+        annBanner.innerText = `📣 店休公告：${data.announcement.startDate} ~ ${data.announcement.endDate} ${data.announcement.message}`;
+      } else {
+        annBanner.innerText = `📣 店休公告：${data.announcement.message}`;
+      }
+    } else if (!inHours) {
+      annBanner.style.display = 'block';
+      annBanner.innerText = "🛑 本店目前非營業時間（營業時間為 週一~週六 15:00-23:00，週日固定公休）";
+    }
+
+    // 控制提交按鈕
+    const submitBtn = document.getElementById("submit-btn");
+    if (!isStoreOpen) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = "公休/打烊中 暫不接單";
+    }
+
+    renderMenu();
+  } catch (err) {
+    console.error("載入菜單失敗：", err);
+    container.innerHTML = `<div style="color:red; font-weight:bold; padding:15px; text-align:center;">
+      ⚠️ 菜單載入失敗！<br>
+      錯誤訊息：${err.message}<br><br>
+      請確認：<br>
+      1. Apps Script 的權限是否設為「所有人」<br>
+      2. 試算表 ID 與 Menu 工作表名稱是否正確
+    </div>`;
+  }
+};
   function renderMenu() {
     const container = document.getElementById("menu-container");
     container.innerHTML = "";
