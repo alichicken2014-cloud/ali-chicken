@@ -390,73 +390,81 @@
     }
   }
 
-  async function submitOrder() {
-    const name = document.getElementById("cust-name").value.trim();
-    const phone = document.getElementById("cust-phone").value.trim();
-    const remark = document.getElementById("cust-remark").value.trim();
-    const totalVal = parseInt(document.getElementById("total-val").innerText);
+  // 取得網址中的 userId 參數 (例如: index.html?userId=U123456789)
+function getUserIdFromUrl() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('userId') || urlParams.get('lineId') || '';
+}
 
-    if (cart.length === 0 || totalVal === 0) {
-      alert("⚠️ 請先選擇點餐項目！");
-      return;
-    }
-    if (!name) {
-      alert("⚠️ 請輸入訂購人姓名！");
-      return;
-    }
-    if (!phone) {
-      alert("⚠️ 請輸入聯絡電話！");
-      return;
-    }
+async function submitOrder() {
+  const name = document.getElementById("cust-name").value.trim();
+  const phone = document.getElementById("cust-phone").value.trim();
+  const remark = document.getElementById("cust-remark").value.trim();
+  const totalVal = parseInt(document.getElementById("total-val").innerText);
 
-    const itemsDetail = cart.map(c => `${c.fullName} x${c.qty}`).join("\n");
-    const spice = document.querySelector('input[name="spice"]:checked').value;
-
-    const payload = {
-      action: "createOrder",
-      name: name,
-      phone: phone,
-      spice: spice,
-      preference: "已依餐點標註",
-      itemsDetail: itemsDetail,
-      totalPrice: totalVal,
-      remark: remark
-    };
-
-    const submitBtn = document.getElementById("submit-btn");
-    submitBtn.disabled = true;
-    submitBtn.innerText = "訂單傳送中...";
-
-    try {
-      const response = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-
-      if (result.status === "success") {
-        alert(`🎉 訂單成功送出！\n您的取單號碼：${result.orderId}\n請至現場報號取餐！`);
-        cart = [];
-        updateCartUI();
-        document.getElementById("cust-remark").value = "";
-      } else {
-        alert("⚠️ 送出失敗：" + (result.message || "系統繁忙，請稍後再試。"));
-      }
-
-    } catch (error) {
-      console.error("送單異常:", error);
-      alert("📡 網路連線較不穩定，請重試！");
-    } finally {
-      if (isOpenState) {
-        submitBtn.disabled = false;
-        submitBtn.innerText = "確認送出訂單";
-      }
-    }
+  if (cart.length === 0 || totalVal === 0) {
+    alert("⚠️ 請先選擇點餐項目！");
+    return;
+  }
+  if (!name) {
+    alert("⚠️ 請輸入訂購人姓名！");
+    return;
+  }
+  if (!phone) {
+    alert("⚠️ 請輸入聯絡電話！");
+    return;
   }
 
-  initData();
+  const itemsDetail = cart.map(c => `${c.fullName} x${c.qty}`).join("\n");
+  const spice = document.querySelector('input[name="spice"]:checked').value;
+  
+  // 自動抓取 userId
+  const userId = getUserIdFromUrl();
+
+  const payload = {
+    action: "createOrder",
+    name: name,
+    phone: phone,
+    spice: spice,
+    preference: "已依餐點標註",
+    itemsDetail: itemsDetail,
+    totalPrice: totalVal,
+    remark: remark,
+    userId: userId // 👈 帶入 userId
+  };
+
+  const submitBtn = document.getElementById("submit-btn");
+  submitBtn.disabled = true;
+  submitBtn.innerText = "訂單傳送中...";
+
+  try {
+    const response = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (result.status === "success") {
+      alert(`🎉 訂單成功送出！\n您的取單號碼：${result.orderId}\n請至現場報號取餐！`);
+      cart = [];
+      updateCartUI();
+      document.getElementById("cust-remark").value = "";
+    } else {
+      alert("⚠️ 送出失敗：" + (result.message || "系統繁忙，請稍後再試。"));
+    }
+
+  } catch (error) {
+    console.error("送單異常:", error);
+    alert("📡 網路連線較不穩定，請重試！");
+  } finally {
+    if (isOpenState) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = "確認送出訂單";
+    }
+  }
+};
 </script>
 
 </body>
