@@ -7,6 +7,8 @@
   
   <!-- 更換為穩定版 GBK 編碼庫 -->
 <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
+  <!-- 引入 POS 熱感應機專用 GBK 轉碼庫 -->
+<script src="https://cdn.jsdelivr.net/npm/iconv-lite-umd@0.6.8/lib/iconv-lite-umd.min.js"></script>
 
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; }
@@ -188,7 +190,7 @@
       alert("⚠️ 藍牙連線失敗：" + err.message);
     }
   }
-// 💡 內建 GBK 轉碼字典 + 省紙優化版出單函式
+// 💡 徹底解決亂碼與多餘空白的終極列印函式
 async function printOrder(o) {
   if (!printCharacteristic) {
     alert("⚠️ 請先連接藍芽出單機！");
@@ -204,7 +206,7 @@ async function printOrder(o) {
     const remark = o.remark || "";
     const totalPrice = o.totalPrice || 0;
 
-    // 1. 緊湊排版 (減少空行與不必要的邊框，節省熱感應紙)
+    // 排版設定（緊湊省紙）
     let txt = `========================\n`;
     txt += `  阿力香雞排 崑山店 點餐單  \n`;
     txt += `========================\n`;
@@ -219,18 +221,25 @@ async function printOrder(o) {
       txt += `備註：${remark}\n`;
     }
     txt += `總金額：$${totalPrice} 元\n`;
-    txt += `========================\n\n`; // 只留兩行換行，避免浪費紙張
+    txt += `========================\n\n`;
 
-    // 2. 純 JS 進行 GBK 轉碼（徹底擺脫外部 CDN 載入失敗問題）
-    const uint8array = stringToGBKUint8Array(txt);
+    // 使用 iconv-lite 將 Unicode 繁簡中文轉換為 GBK
+    let uint8array;
+    if (window.iconv) {
+      uint8array = window.iconv.encode(txt, 'gbk');
+    } else {
+      // 備用方案
+      uint8array = new TextEncoder().encode(txt);
+    }
 
-    // 3. 發送 ESC/POS 指令
-    // 初始化印表機 (ESC @)
+    // 發送 ESC/POS 熱感應出單機指令
+    // 1. 初始化印表機 (ESC @)
     await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x40]));
-    // 切換漢字模式 (FS &)
+    
+    // 2. 切換至中文模式 (FS &)
     await printCharacteristic.writeValue(new Uint8Array([0x1C, 0x26]));
 
-    // 分段切片傳送 (每區塊 64 bytes)
+    // 3. 切片發送資料 (每區塊 64 bytes 避免硬體 Buffer 溢位)
     const chunkSize = 64;
     for (let i = 0; i < uint8array.length; i += chunkSize) {
       const chunk = uint8array.slice(i, i + chunkSize);
@@ -238,7 +247,7 @@ async function printOrder(o) {
       await new Promise(resolve => setTimeout(resolve, 30));
     }
 
-    // 4. 適度進紙與切紙 (ESC d 2 走紙2行 + 半切指令)
+    // 4. 進紙與半切 (ESC d 2 走紙2行 + GS V 1 切紙)
     await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x64, 0x02]));
     await printCharacteristic.writeValue(new Uint8Array([0x1D, 0x56, 0x01]));
 
