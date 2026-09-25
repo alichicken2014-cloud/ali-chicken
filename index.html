@@ -130,34 +130,43 @@
   let tempSelectedItem = null;
   let lineUserId = ""; // 存放自動取得的 LINE ID
 
-  // 💡 初始化 LIFF 自動取得顧客 LINE User ID 與姓名
-  async function initLiff() {
-    try {
-      if (typeof liff !== "undefined" && MY_LIFF_ID) {
-        await liff.init({ liffId: MY_LIFF_ID });
-        
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          lineUserId = profile.userId;
-          
-          // 自動帶入顧客在 LINE 上的暱稱
-          const nameInput = document.getElementById("cust-name");
-          if (nameInput && !nameInput.value) {
-            nameInput.value = profile.displayName;
-          }
-        } else {
-          // 若在外部瀏覽器開啟，觸發登入或備用網址參數
-          const urlParams = new URLSearchParams(window.location.search);
-          lineUserId = urlParams.get('userId') || urlParams.get('lineId') || '';
+  // 💡 強化版的 LIFF 載入與 userId 抓取邏輯
+async function initLiff() {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  // 1. 優先從網址參數抓取 (若有帶入 ?userId=... 或 ?liff.state=...)
+  lineUserId = urlParams.get('userId') || urlParams.get('lineId') || '';
+
+  try {
+    if (typeof liff !== "undefined" && MY_LIFF_ID) {
+      await liff.init({ liffId: MY_LIFF_ID });
+      
+      // 2. 如果未登入且在 LINE App 內，自動引導登入
+      if (!liff.isLoggedIn()) {
+        if (liff.isInClient()) {
+          liff.login();
+          return;
+        }
+      } else {
+        // 3. 成功取得 Profile 資訊
+        const profile = await liff.getProfile();
+        if (profile && profile.userId) {
+          lineUserId = profile.userId; // 取得正式 LINE UID
+        }
+
+        // 自動帶入姓名
+        const nameInput = document.getElementById("cust-name");
+        if (nameInput && !nameInput.value && profile.displayName) {
+          nameInput.value = profile.displayName;
         }
       }
-    } catch (err) {
-      console.warn("LIFF 初始化非環境或失敗:", err);
-      const urlParams = new URLSearchParams(window.location.search);
-      lineUserId = urlParams.get('userId') || urlParams.get('lineId') || '';
     }
+  } catch (err) {
+    console.warn("LIFF 初始化備援模式:", err);
   }
-
+  
+  console.log("當前綁定 LINE UserId:", lineUserId);
+}
   async function initData() {
     try {
       const res = await fetch(`${GAS_URL}?action=getMenu`);
