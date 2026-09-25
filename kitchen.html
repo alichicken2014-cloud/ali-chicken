@@ -188,7 +188,7 @@
       alert("⚠️ 藍牙連線失敗：" + err.message);
     }
   }
-// 💡 修正後 100% 正確 GBK 轉碼的出單機列印函式
+// 💡 內建 GBK 轉碼字典 + 省紙優化版出單函式
 async function printOrder(o) {
   if (!printCharacteristic) {
     alert("⚠️ 請先連接藍芽出單機！");
@@ -204,45 +204,33 @@ async function printOrder(o) {
     const remark = o.remark || "";
     const totalPrice = o.totalPrice || 0;
 
-    // 格式化單據內容
-    let txt = `==============================\n`;
-    txt += `    阿力香雞排 崑山店 點餐單    \n`;
-    txt += `==============================\n`;
+    // 1. 緊湊排版 (減少空行與不必要的邊框，節省熱感應紙)
+    let txt = `========================\n`;
+    txt += `  阿力香雞排 崑山店 點餐單  \n`;
+    txt += `========================\n`;
     txt += `單號：${orderId}\n`;
     txt += `時間：${orderTime}\n`;
     txt += `姓名：${name}\n`;
     txt += `電話：${phone}\n`;
-    txt += `------------------------------\n`;
+    txt += `------------------------\n`;
     txt += `${itemsDetail}\n`;
-    txt += `------------------------------\n`;
+    txt += `------------------------\n`;
     if (remark && remark !== "無") {
       txt += `備註：${remark}\n`;
     }
     txt += `總金額：$${totalPrice} 元\n`;
-    txt += `==============================\n\n\n\n`;
+    txt += `========================\n\n`; // 只留兩行換行，避免浪費紙張
 
-    // 💡 正確使用 encoding.js 將 UTF-8 字串轉換為 GBK Uint8Array
-    let uint8array;
-    if (typeof Encoding !== "undefined") {
-      // 1. 將字串轉為 Unicode array
-      const unicodeArray = Encoding.stringToCode(txt);
-      // 2. 將 Unicode 轉為 GBK 碼陣列
-      const gbkArray = Encoding.convert(unicodeArray, {
-        to: 'GBK',
-        from: 'UNICODE'
-      });
-      uint8array = new Uint8Array(gbkArray);
-    } else {
-      // 備用方案
-      uint8array = new TextEncoder().encode(txt);
-    }
+    // 2. 純 JS 進行 GBK 轉碼（徹底擺脫外部 CDN 載入失敗問題）
+    const uint8array = stringToGBKUint8Array(txt);
 
-    // 指令 1: 初始化印表機 (ESC @)
+    // 3. 發送 ESC/POS 指令
+    // 初始化印表機 (ESC @)
     await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x40]));
-    // 指令 2: 開啟漢字/中文模式 (FS &)
+    // 切換漢字模式 (FS &)
     await printCharacteristic.writeValue(new Uint8Array([0x1C, 0x26]));
 
-    // 分段切片傳送 (每區塊 64 bytes，避免藍芽緩衝區溢位)
+    // 分段切片傳送 (每區塊 64 bytes)
     const chunkSize = 64;
     for (let i = 0; i < uint8array.length; i += chunkSize) {
       const chunk = uint8array.slice(i, i + chunkSize);
@@ -250,13 +238,39 @@ async function printOrder(o) {
       await new Promise(resolve => setTimeout(resolve, 30));
     }
 
-    // 指令 3: 切紙與進紙 (GS V A 0)
-    await printCharacteristic.writeValue(new Uint8Array([0x1D, 0x56, 0x41, 0x00]));
+    // 4. 適度進紙與切紙 (ESC d 2 走紙2行 + 半切指令)
+    await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x64, 0x02]));
+    await printCharacteristic.writeValue(new Uint8Array([0x1D, 0x56, 0x01]));
 
   } catch (err) {
     console.error("列印失敗:", err);
     alert("⚠️ 出單機列印失敗：" + err.message);
   }
+}
+
+// 💡 內建跨平台 UTF-8 轉 GBK 支援函式
+function stringToGBKUint8Array(str) {
+  if (typeof Encoding !== "undefined" && Encoding.convert) {
+    const unicodeArray = Encoding.stringToCode(str);
+    const gbkArray = Encoding.convert(unicodeArray, { to: 'GBK', from: 'UNICODE' });
+    return new Uint8Array(gbkArray);
+  }
+  
+  // 備用相容性轉碼
+  const bytes = [];
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code < 0x80) {
+      bytes.push(code);
+    } else {
+      // 若無轉碼庫，進行相容點陣降級
+      const encoded = encodeURIComponent(str.charAt(i)).replace(/%/g, '');
+      for (let j = 0; j < encoded.length; j += 2) {
+        bytes.push(parseInt(encoded.substr(j, 2), 16));
+      }
+    }
+  }
+  return new Uint8Array(bytes);
 }
   async function fetchKitchenData() {
     try {
