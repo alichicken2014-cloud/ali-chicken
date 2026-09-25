@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>阿力香雞排 崑山店 - 線上點餐</title>
+  
+  <!-- 💡 引入 LINE LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; }
     body { background-color: #f8f9fa; margin: 0; padding: 15px; padding-bottom: 120px; }
@@ -117,16 +121,41 @@
 
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec";
+  const MY_LIFF_ID = "2011276802-mdrsLFND"; // 👈 已設定您的 LIFF ID
 
   let cart = [];
   let rawMenuData = [];
   let currentCategory = "全部";
   let isOpenState = true;
   let tempSelectedItem = null;
+  let lineUserId = ""; // 存放自動取得的 LINE ID
 
-  function getUserIdFromUrl() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('userId') || urlParams.get('lineId') || '';
+  // 💡 初始化 LIFF 自動取得顧客 LINE User ID 與姓名
+  async function initLiff() {
+    try {
+      if (typeof liff !== "undefined" && MY_LIFF_ID) {
+        await liff.init({ liffId: MY_LIFF_ID });
+        
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          lineUserId = profile.userId;
+          
+          // 自動帶入顧客在 LINE 上的暱稱
+          const nameInput = document.getElementById("cust-name");
+          if (nameInput && !nameInput.value) {
+            nameInput.value = profile.displayName;
+          }
+        } else {
+          // 若在外部瀏覽器開啟，觸發登入或備用網址參數
+          const urlParams = new URLSearchParams(window.location.search);
+          lineUserId = urlParams.get('userId') || urlParams.get('lineId') || '';
+        }
+      }
+    } catch (err) {
+      console.warn("LIFF 初始化非環境或失敗:", err);
+      const urlParams = new URLSearchParams(window.location.search);
+      lineUserId = urlParams.get('userId') || urlParams.get('lineId') || '';
+    }
   }
 
   async function initData() {
@@ -389,7 +418,6 @@
 
     const itemsDetail = cart.map(c => `${c.fullName} x${c.qty}`).join("\n");
     const spice = document.querySelector('input[name="spice"]:checked').value;
-    const userId = getUserIdFromUrl();
 
     const payload = {
       action: "createOrder",
@@ -400,7 +428,7 @@
       itemsDetail: itemsDetail,
       totalPrice: totalVal,
       remark: remark,
-      userId: userId
+      userId: lineUserId // 👈 自動帶入 LIFF 取得的 userId
     };
 
     const submitBtn = document.getElementById("submit-btn");
@@ -421,6 +449,11 @@
         cart = [];
         updateCartUI();
         document.getElementById("cust-remark").value = "";
+        
+        // 若在 LIFF 內開啟，送單後可自動關閉 LIFF 視窗
+        if (typeof liff !== "undefined" && liff.isInClient()) {
+          liff.closeWindow();
+        }
       } else {
         alert("⚠️ 送出失敗：" + (result.message || "系統繁忙，請稍後再試。"));
       }
@@ -436,6 +469,8 @@
     }
   }
 
+  // 執行 LIFF 初始化與菜單載入
+  initLiff();
   initData();
 </script>
 
