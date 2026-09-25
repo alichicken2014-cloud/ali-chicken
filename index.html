@@ -8,19 +8,15 @@
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; }
     body { background-color: #f8f9fa; margin: 0; padding: 15px; padding-bottom: 120px; }
     
-    /* 頂部橘色標題 */
     .header { text-align: center; background: #e67e22; color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
-    .header h1 { margin: 0; font-size: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .header h1 { margin: 0; font-size: 22px; }
     
-    /* 公告與狀態 Banner */
     .announcement-banner { background-color: #dc3545; color: white; padding: 12px 15px; text-align: center; font-weight: bold; font-size: 14px; border-radius: 8px; margin-bottom: 12px; display: none; }
 
-    /* 動態分類頁籤（支援滑動） */
     .tab-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 15px; border-bottom: 2px solid #e0e0e0; -webkit-overflow-scrolling: touch; }
     .tab-btn { padding: 8px 18px; background: #ffffff; border: 1px solid #ccc; border-radius: 20px; font-size: 15px; font-weight: bold; color: #555; white-space: nowrap; cursor: pointer; transition: 0.2s; }
     .tab-btn.active { background: #e67e22; color: white; border-color: #e67e22; }
 
-    /* 菜單卡片兩欄網格 */
     .menu-section { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
     .menu-card { background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 18px 10px; text-align: center; cursor: pointer; position: relative; user-select: none; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
     .menu-card:active { background-color: #ffe6d5; }
@@ -29,10 +25,8 @@
     .menu-price { font-size: 16px; color: #e67e22; font-weight: bold; margin-top: 6px; }
     .sold-out-text { font-size: 14px; color: #dc3545; font-weight: bold; margin-top: 6px; }
     
-    /* 點餐數量標籤 Badge */
     .badge { position: absolute; top: -6px; right: -6px; background: #e67e22; color: white; border-radius: 50%; width: 24px; height: 24px; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
-    /* 已選餐點購物車預覽 */
     .cart-summary { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
     .cart-summary h3 { margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; color: #333; display: flex; justify-content: space-between; align-items: center; }
     .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; font-size: 14px; }
@@ -41,18 +35,15 @@
     .cart-btn-qty { background: #e67e22; color: white; border: none; border-radius: 4px; width: 26px; height: 26px; font-size: 16px; font-weight: bold; cursor: pointer; }
     .cart-btn-del { background: #dc3545; color: white; border: none; border-radius: 4px; width: 26px; height: 26px; font-size: 12px; cursor: pointer; margin-left: 4px; }
 
-    /* 表單區（對齊圖片風格） */
     .form-group { background: white; padding: 18px 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
     .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #222; font-size: 16px; }
     .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 15px; color: #333; background: #fafafa; }
-    .form-control:focus { outline: none; border-color: #e67e22; background: #fff; }
     
     .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
     .radio-label { flex: 1; min-width: 60px; text-align: center; border: 1px solid #ccc; padding: 8px 4px; border-radius: 6px; cursor: pointer; font-size: 14px; background: #fafafa; }
     .radio-group input { display: none; }
     .radio-group input:checked + .radio-label { background: #e67e22; color: white; border-color: #e67e22; font-weight: bold; }
 
-    /* 客製化選項彈窗 Modal */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
     .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
     .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; text-align: center; }
@@ -61,7 +52,6 @@
     .btn-cancel { background: #6c757d; color: white; }
     .btn-confirm { background: #e67e22; color: white; }
 
-    /* 底部鮮綠色按鈕結帳列 */
     .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 12px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
     .total-price { font-size: 20px; font-weight: bold; color: #e67e22; }
     .submit-btn { background: #28a745; color: white; border: none; padding: 12px 22px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; }
@@ -76,21 +66,17 @@
 
 <div id="announcement-banner" class="announcement-banner"></div>
 
-<!-- 頁籤區域 -->
 <div class="tab-container" id="tab-container">
   <div class="tab-btn active">菜單讀取中...</div>
 </div>
 
-<!-- 菜單卡片區域 -->
 <div class="menu-section" id="menu-container"></div>
 
-<!-- 已選餐點購物車區 -->
 <div class="cart-summary" id="cart-summary-box" style="display: none;">
   <h3>🛒 已選餐點明細 <button style="font-size: 12px; background: none; border: none; color: #dc3545; cursor: pointer;" onclick="clearCart()">清空購物車</button></h3>
   <div id="cart-items-list"></div>
 </div>
 
-<!-- 訂購人資訊 -->
 <div class="form-group">
   <label>👤 訂購人姓名：</label>
   <input type="text" id="cust-name" class="form-control" placeholder="請輸入您的稱呼" />
@@ -99,7 +85,6 @@
   <input type="tel" id="cust-phone" class="form-control" placeholder="請輸入手機號碼 (如: 0912345678)" />
 </div>
 
-<!-- 整包調味與備註 -->
 <div class="form-group">
   <label>🌶️ 整包主要調味：</label>
   <div class="radio-group">
@@ -114,13 +99,11 @@
   <input type="text" id="cust-remark" class="form-control" placeholder="例：有特殊需求請在此註明..." />
 </div>
 
-<!-- 底部結帳區 -->
 <div class="bottom-bar">
   <div class="total-price">總計：$<span id="total-val">0</span></div>
   <button id="submit-btn" class="submit-btn" onclick="submitOrder()">確認送出訂單</button>
 </div>
 
-<!-- 客製化選單彈窗 Modal (針對雞排切法/雞排與薯條調味) -->
 <div class="modal-overlay" id="custom-modal">
   <div class="modal-content">
     <div class="modal-title" id="modal-item-name">品項名稱</div>
@@ -141,13 +124,9 @@
   let isOpenState = true;
   let tempSelectedItem = null;
 
-  // 自動判斷營業時間（週一至週六 15:00~23:00，週日固定公休）
-  function isBusinessHours() {
-    const now = new Date();
-    const day = now.getDay();
-    const hours = now.getHours();
-    if (day === 0) return false;
-    return (hours >= 15 && hours < 23);
+  function getUserIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('userId') || urlParams.get('lineId') || '';
   }
 
   async function initData() {
@@ -155,9 +134,8 @@
       const res = await fetch(`${GAS_URL}?action=getMenu`);
       const data = await res.json();
       
-      const inHours = isBusinessHours();
-      isOpenState = data.isOpen && inHours;
-      updateStatusUI(isOpenState, data.announcement, inHours);
+      isOpenState = data.isOpen;
+      updateStatusUI(isOpenState, data.announcement);
 
       if (data.menu && data.menu.length > 0) {
         rawMenuData = data.menu;
@@ -365,16 +343,16 @@
     renderMenuCards();
   }
 
-  function updateStatusUI(isOpen, ann, inHours) {
+  function updateStatusUI(isOpen, ann) {
     const banner = document.getElementById("announcement-banner");
     const submitBtn = document.getElementById("submit-btn");
 
     if (ann && ann.type !== 'none') {
       banner.style.display = "block";
       banner.innerText = `📢 店休公告：${ann.message || ''}`;
-    } else if (!inHours) {
+    } else if (!isOpen) {
       banner.style.display = "block";
-      banner.innerText = "🛑 目前為非營業時間（營業時間為 週一~週六 15:00-23:00，週日固定公休）";
+      banner.innerText = "🛑 本店目前非營業時間（營業時間為 週一~週六 15:00-23:00，週日固定公休）";
     } else {
       banner.style.display = "none";
     }
@@ -390,81 +368,75 @@
     }
   }
 
-  // 取得網址中的 userId 參數 (例如: index.html?userId=U123456789)
-function getUserIdFromUrl() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('userId') || urlParams.get('lineId') || '';
-}
+  async function submitOrder() {
+    const name = document.getElementById("cust-name").value.trim();
+    const phone = document.getElementById("cust-phone").value.trim();
+    const remark = document.getElementById("cust-remark").value.trim();
+    const totalVal = parseInt(document.getElementById("total-val").innerText);
 
-async function submitOrder() {
-  const name = document.getElementById("cust-name").value.trim();
-  const phone = document.getElementById("cust-phone").value.trim();
-  const remark = document.getElementById("cust-remark").value.trim();
-  const totalVal = parseInt(document.getElementById("total-val").innerText);
-
-  if (cart.length === 0 || totalVal === 0) {
-    alert("⚠️ 請先選擇點餐項目！");
-    return;
-  }
-  if (!name) {
-    alert("⚠️ 請輸入訂購人姓名！");
-    return;
-  }
-  if (!phone) {
-    alert("⚠️ 請輸入聯絡電話！");
-    return;
-  }
-
-  const itemsDetail = cart.map(c => `${c.fullName} x${c.qty}`).join("\n");
-  const spice = document.querySelector('input[name="spice"]:checked').value;
-  
-  // 自動抓取 userId
-  const userId = getUserIdFromUrl();
-
-  const payload = {
-    action: "createOrder",
-    name: name,
-    phone: phone,
-    spice: spice,
-    preference: "已依餐點標註",
-    itemsDetail: itemsDetail,
-    totalPrice: totalVal,
-    remark: remark,
-    userId: userId // 👈 帶入 userId
-  };
-
-  const submitBtn = document.getElementById("submit-btn");
-  submitBtn.disabled = true;
-  submitBtn.innerText = "訂單傳送中...";
-
-  try {
-    const response = await fetch(GAS_URL, {
-      method: "POST",
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-
-    const result = await response.json();
-
-    if (result.status === "success") {
-      alert(`🎉 訂單成功送出！\n您的取單號碼：${result.orderId}\n請至現場報號取餐！`);
-      cart = [];
-      updateCartUI();
-      document.getElementById("cust-remark").value = "";
-    } else {
-      alert("⚠️ 送出失敗：" + (result.message || "系統繁忙，請稍後再試。"));
+    if (cart.length === 0 || totalVal === 0) {
+      alert("⚠️ 請先選擇點餐項目！");
+      return;
+    }
+    if (!name) {
+      alert("⚠️ 請輸入訂購人姓名！");
+      return;
+    }
+    if (!phone) {
+      alert("⚠️ 請輸入聯絡電話！");
+      return;
     }
 
-  } catch (error) {
-    console.error("送單異常:", error);
-    alert("📡 網路連線較不穩定，請重試！");
-  } finally {
-    if (isOpenState) {
-      submitBtn.disabled = false;
-      submitBtn.innerText = "確認送出訂單";
+    const itemsDetail = cart.map(c => `${c.fullName} x${c.qty}`).join("\n");
+    const spice = document.querySelector('input[name="spice"]:checked').value;
+    const userId = getUserIdFromUrl();
+
+    const payload = {
+      action: "createOrder",
+      name: name,
+      phone: phone,
+      spice: spice,
+      preference: "已依餐點標註",
+      itemsDetail: itemsDetail,
+      totalPrice: totalVal,
+      remark: remark,
+      userId: userId
+    };
+
+    const submitBtn = document.getElementById("submit-btn");
+    submitBtn.disabled = true;
+    submitBtn.innerText = "訂單傳送中...";
+
+    try {
+      const response = await fetch(GAS_URL, {
+        method: "POST",
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+
+      if (result.status === "success") {
+        alert(`🎉 訂單成功送出！\n您的取單號碼：${result.orderId}\n請至現場報號取餐！`);
+        cart = [];
+        updateCartUI();
+        document.getElementById("cust-remark").value = "";
+      } else {
+        alert("⚠️ 送出失敗：" + (result.message || "系統繁忙，請稍後再試。"));
+      }
+
+    } catch (error) {
+      console.error("送單異常:", error);
+      alert("📡 網路連線較不穩定，請重試！");
+    } finally {
+      if (isOpenState) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "確認送出訂單";
+      }
     }
   }
-};
+
+  initData();
 </script>
 
 </body>
