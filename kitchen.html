@@ -4,11 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>阿力香雞排 崑山店 - 廚房與菜單管理系統</title>
-  
-  <!-- 更換為穩定版 GBK 編碼庫 -->
-<script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.0.0/encoding.min.js"></script>
-  <!-- 引入 POS 熱感應機專用 GBK 轉碼庫 -->
-<script src="https://cdn.jsdelivr.net/npm/iconv-lite-umd@0.6.8/lib/iconv-lite-umd.min.js"></script>
+
+  <!-- 💡 引入 html2canvas：將文字單據轉為圖片點陣圖，100% 解決亂碼問題 -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; }
@@ -61,9 +59,38 @@
     .form-control:focus { border-color: #ff8c00; outline: none; }
     .date-range-group { display: flex; gap: 10px; align-items: center; }
     .btn-save-announcement { width: 100%; padding: 12px; background: #ff8c00; border: none; border-radius: 6px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
+
+    /* 🖼️ 出單專用隱藏樣式（寬度精準對齊 58mm 熱感應紙：384 像素） */
+    #print-receipt-template {
+      position: absolute; left: -9999px; top: -9999px;
+      width: 384px; background: #ffffff; color: #000000;
+      padding: 10px; font-family: "Microsoft JhengHei", "黑體-繁", sans-serif;
+    }
+    .receipt-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+    .receipt-sub { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+    .receipt-divider { border-top: 2px dashed #000; margin: 8px 0; }
+    .receipt-row { font-size: 18px; font-weight: bold; margin-bottom: 4px; word-break: break-all; }
+    .receipt-items { font-size: 20px; font-weight: bold; line-height: 1.4; white-space: pre-wrap; margin: 10px 0; }
+    .receipt-total { font-size: 22px; font-weight: bold; text-align: right; margin-top: 8px; }
   </style>
 </head>
 <body>
+
+<!-- 🖼️ 熱感應圖片生成隱藏容器 -->
+<div id="print-receipt-template">
+  <div class="receipt-title">阿力香雞排 崑山店</div>
+  <div class="receipt-sub">【廚房點餐單】</div>
+  <div class="receipt-divider"></div>
+  <div class="receipt-row" id="pr-orderId">單號：#000</div>
+  <div class="receipt-row" id="pr-time">時間：00:00</div>
+  <div class="receipt-row" id="pr-name">姓名：顧客</div>
+  <div class="receipt-row" id="pr-phone">電話：</div>
+  <div class="receipt-divider"></div>
+  <div class="receipt-items" id="pr-items">品項明細</div>
+  <div class="receipt-divider"></div>
+  <div class="receipt-row" id="pr-remark" style="display:none; color:#000;">備註：</div>
+  <div class="receipt-total" id="pr-total">總金額：$0 元</div>
+</div>
 
 <div class="top-bar">
   <h1>🍳 阿力香雞排 崑山店 - 廚房系統</h1>
@@ -190,97 +217,95 @@
       alert("⚠️ 藍牙連線失敗：" + err.message);
     }
   }
-// 💡 徹底解決亂碼與多餘空白的終極列印函式
-async function printOrder(o) {
-  if (!printCharacteristic) {
-    alert("⚠️ 請先連接藍芽出單機！");
-    return;
-  }
 
-  try {
-    const orderId = o.orderId || o.orderNo || "#000";
-    const orderTime = o.orderTime || o.time || "";
-    const name = o.name || "顧客";
-    const phone = o.phone || "";
-    const itemsDetail = o.itemsDetail || "";
-    const remark = o.remark || "";
-    const totalPrice = o.totalPrice || 0;
-
-    // 排版設定（緊湊省紙）
-    let txt = `========================\n`;
-    txt += `  阿力香雞排 崑山店 點餐單  \n`;
-    txt += `========================\n`;
-    txt += `單號：${orderId}\n`;
-    txt += `時間：${orderTime}\n`;
-    txt += `姓名：${name}\n`;
-    txt += `電話：${phone}\n`;
-    txt += `------------------------\n`;
-    txt += `${itemsDetail}\n`;
-    txt += `------------------------\n`;
-    if (remark && remark !== "無") {
-      txt += `備註：${remark}\n`;
-    }
-    txt += `總金額：$${totalPrice} 元\n`;
-    txt += `========================\n\n`;
-
-    // 使用 iconv-lite 將 Unicode 繁簡中文轉換為 GBK
-    let uint8array;
-    if (window.iconv) {
-      uint8array = window.iconv.encode(txt, 'gbk');
-    } else {
-      // 備用方案
-      uint8array = new TextEncoder().encode(txt);
+  // 🖼️ 核心：將單據轉為點陣圖圖像列印 (100% 不亂碼)
+  async function printOrder(o) {
+    if (!printCharacteristic) {
+      alert("⚠️ 請先連接藍牙出單機！");
+      return;
     }
 
-    // 發送 ESC/POS 熱感應出單機指令
-    // 1. 初始化印表機 (ESC @)
-    await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x40]));
-    
-    // 2. 切換至中文模式 (FS &)
-    await printCharacteristic.writeValue(new Uint8Array([0x1C, 0x26]));
+    try {
+      // 1. 填入隱藏 HTML 範本
+      document.getElementById("pr-orderId").innerText = "單號：" + (o.orderId || o.orderNo || "#000");
+      document.getElementById("pr-time").innerText = "時間：" + (o.orderTime || o.time || "");
+      document.getElementById("pr-name").innerText = "姓名：" + (o.name || "顧客");
+      document.getElementById("pr-phone").innerText = "電話：" + (o.phone || "");
+      document.getElementById("pr-items").innerText = o.itemsDetail || "";
+      document.getElementById("pr-total").innerText = "總金額：$" + (o.totalPrice || 0) + " 元";
 
-    // 3. 切片發送資料 (每區塊 64 bytes 避免硬體 Buffer 溢位)
-    const chunkSize = 64;
-    for (let i = 0; i < uint8array.length; i += chunkSize) {
-      const chunk = uint8array.slice(i, i + chunkSize);
-      await printCharacteristic.writeValue(chunk);
-      await new Promise(resolve => setTimeout(resolve, 30));
+      const remarkEl = document.getElementById("pr-remark");
+      if (o.remark && o.remark !== "無") {
+        remarkEl.innerText = "備註：" + o.remark;
+        remarkEl.style.display = "block";
+      } else {
+        remarkEl.style.display = "none";
+      }
+
+      // 2. 將 HTML 轉為 Canvas 圖片
+      const tpl = document.getElementById("print-receipt-template");
+      const canvas = await html2canvas(tpl, { scale: 1, backgroundColor: "#ffffff" });
+      const ctx = canvas.getContext("2d");
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      // 3. 將圖像轉為 ESC/POS 點陣圖 Command (GS v 0)
+      const escPosBytes = convertCanvasToEscPosRaster(imgData);
+
+      // 4. 發送至印表機
+      await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x40])); // 初始化
+
+      const chunkSize = 64;
+      for (let i = 0; i < escPosBytes.length; i += chunkSize) {
+        const chunk = escPosBytes.slice(i, i + chunkSize);
+        await printCharacteristic.writeValue(chunk);
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
+
+      // 5. 走紙 2 行並切紙
+      await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x64, 0x02]));
+      await printCharacteristic.writeValue(new Uint8Array([0x1D, 0x56, 0x01]));
+
+    } catch (err) {
+      console.error("圖片列印失敗:", err);
+      alert("⚠️ 出單列印失敗：" + err.message);
     }
-
-    // 4. 進紙與半切 (ESC d 2 走紙2行 + GS V 1 切紙)
-    await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x64, 0x02]));
-    await printCharacteristic.writeValue(new Uint8Array([0x1D, 0x56, 0x01]));
-
-  } catch (err) {
-    console.error("列印失敗:", err);
-    alert("⚠️ 出單機列印失敗：" + err.message);
   }
-}
 
-// 💡 內建跨平台 UTF-8 轉 GBK 支援函式
-function stringToGBKUint8Array(str) {
-  if (typeof Encoding !== "undefined" && Encoding.convert) {
-    const unicodeArray = Encoding.stringToCode(str);
-    const gbkArray = Encoding.convert(unicodeArray, { to: 'GBK', from: 'UNICODE' });
-    return new Uint8Array(gbkArray);
-  }
-  
-  // 備用相容性轉碼
-  const bytes = [];
-  for (let i = 0; i < str.length; i++) {
-    const code = str.charCodeAt(i);
-    if (code < 0x80) {
-      bytes.push(code);
-    } else {
-      // 若無轉碼庫，進行相容點陣降級
-      const encoded = encodeURIComponent(str.charAt(i)).replace(/%/g, '');
-      for (let j = 0; j < encoded.length; j += 2) {
-        bytes.push(parseInt(encoded.substr(j, 2), 16));
+  // 💡 點陣圖轉換演算法 (Canvas RGBA -> ESC/POS Raster Monochromatic)
+  function convertCanvasToEscPosRaster(imgData) {
+    const width = imgData.width;
+    const height = imgData.height;
+    const widthBytes = Math.ceil(width / 8);
+    const pixels = imgData.data;
+
+    const commandList = [];
+    // GS v 0 模式 (點陣圖片列印)
+    commandList.push(0x1D, 0x76, 0x30, 0, widthBytes & 0xFF, (widthBytes >> 8) & 0xFF, height & 0xFF, (height >> 8) & 0xFF);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < widthBytes; x++) {
+        let byteVal = 0;
+        for (let bit = 0; bit < 8; bit++) {
+          const pixelX = x * 8 + bit;
+          if (pixelX < width) {
+            const idx = (y * width + pixelX) * 4;
+            const r = pixels[idx];
+            const g = pixels[idx + 1];
+            const b = pixels[idx + 2];
+            const alpha = pixels[idx + 3];
+            // 灰階二值化 (計算黑白點)
+            const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+            if (alpha > 128 && luminance < 160) {
+              byteVal |= (0x80 >> bit); // 設定為黑色點
+            }
+          }
+        }
+        commandList.push(byteVal);
       }
     }
+    return new Uint8Array(commandList);
   }
-  return new Uint8Array(bytes);
-}
+
   async function fetchKitchenData() {
     try {
       const response = await fetch(`${GAS_URL}?action=getKitchenOrders`, {
@@ -388,7 +413,6 @@ function stringToGBKUint8Array(str) {
     });
   }
 
-  // 💡 補齊缺少的公告渲染與控制函式
   function toggleAnnouncementFields() {
     const type = document.getElementById('announcement-type').value;
     document.getElementById('vacation-dates-group').style.display = (type === 'vacation') ? 'block' : 'none';
