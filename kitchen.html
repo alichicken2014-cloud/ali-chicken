@@ -247,8 +247,18 @@
 
   async function fetchKitchenData() {
     try {
-      const res = await fetch(`${GAS_URL}?action=getKitchenOrders`);
-      const data = await res.json();
+      // 使用更強健的抓取設定
+      const response = await fetch(`${GAS_URL}?action=getKitchenOrders`, {
+        method: 'GET',
+        redirect: 'follow'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP 錯誤: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("後端回應資料:", data);
       
       isOpenState = data.isOpen;
       manualOverride = data.manualOverride || "auto";
@@ -279,7 +289,9 @@
         renderMenuMgmt();
       }
     } catch (err) {
-      console.error("載入失敗:", err);
+      console.error("載入失敗詳情:", err);
+      const container = document.getElementById("orders-container");
+      container.innerHTML = `<div style='color:#dc3545; font-size:16px;'>⚠️ 資料載入失敗：${err.message}<br>請確認 Apps Script 部署權限設為「任何人 (Anyone)」。</div>`;
     }
   }
 
