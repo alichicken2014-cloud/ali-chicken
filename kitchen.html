@@ -60,19 +60,20 @@
     .date-range-group { display: flex; gap: 10px; align-items: center; }
     .btn-save-announcement { width: 100%; padding: 12px; background: #ff8c00; border: none; border-radius: 6px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
 
-   /* 🖼️ 出單專用範本（特大字體、滿版加粗版） */
+   /* 🖼️ 58mm 熱感應紙專用黃金比例 (寬度固定 384px) */
     #print-receipt-template {
       position: absolute; left: -9999px; top: -9999px;
       width: 384px; background: #ffffff; color: #000000;
-      padding: 10px 4px 40px 4px; /* 底部加深留白，確保走紙切紙完全不咬字 */
+      padding: 10px 16px 30px 16px; /* 左右留適當邊距，100% 不切字 */
+      box-sizing: border-box;
       font-family: "Microsoft JhengHei", "黑體-繁", sans-serif;
     }
-    .receipt-title { text-align: center; font-size: 34px; font-weight: 900; margin-bottom: 6px; }
-    .receipt-sub { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-    .receipt-divider { border-top: 4px dashed #000; margin: 12px 0; }
-    .receipt-row { font-size: 28px; font-weight: 900; margin-bottom: 8px; word-break: break-all; }
-    .receipt-items { font-size: 32px; font-weight: 900; line-height: 1.5; white-space: pre-wrap; margin: 15px 0; }
-    .receipt-total { font-size: 36px; font-weight: 900; text-align: right; margin-top: 15px; margin-bottom: 15px; }
+    .receipt-title { text-align: center; font-size: 26px; font-weight: 900; margin-bottom: 4px; }
+    .receipt-sub { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+    .receipt-divider { border-top: 3px dashed #000; margin: 8px 0; }
+    .receipt-row { font-size: 22px; font-weight: 900; margin-bottom: 6px; word-break: break-all; }
+    .receipt-items { font-size: 24px; font-weight: 900; line-height: 1.4; white-space: pre-wrap; margin: 10px 0; word-break: break-all; }
+    .receipt-total { font-size: 26px; font-weight: 900; text-align: right; margin-top: 10px; margin-bottom: 10px; }
   </style>
 </head>
 <body>
@@ -219,7 +220,7 @@
     }
   }
 
- // 🖼️ 超大字體 + 高清晰度點陣圖列印函式
+// 🖼️ 58mm 高速傳輸 + 滿版不切字列印函式
   async function printOrder(o) {
     if (!printCharacteristic) {
       alert("⚠️ 請先連接藍芽出單機！");
@@ -243,27 +244,28 @@
         remarkEl.style.display = "none";
       }
 
-      // 2. 將 HTML 轉為 Canvas 圖片 (scale 1.5 增加點陣圖清晰度)
+      // 2. 將 HTML 轉為 Canvas 圖片 (scale: 1 完美 1:1 點陣圖)
       const tpl = document.getElementById("print-receipt-template");
-      const canvas = await html2canvas(tpl, { scale: 1.5, backgroundColor: "#ffffff" });
+      const canvas = await html2canvas(tpl, { scale: 1, backgroundColor: "#ffffff" });
       const ctx = canvas.getContext("2d");
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
       // 3. 轉為 ESC/POS 點陣圖 Command
       const escPosBytes = convertCanvasToEscPosRaster(imgData);
 
-      // 4. 發送至印表機
+      // 4. 發送至印表機 (高速封包優化)
       await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x40])); // 初始化
 
-      const chunkSize = 64;
+      // 💡 增大每批傳輸封包 (128 bytes) 並降低延遲 (5ms)，速度飛快！
+      const chunkSize = 128;
       for (let i = 0; i < escPosBytes.length; i += chunkSize) {
         const chunk = escPosBytes.slice(i, i + chunkSize);
         await printCharacteristic.writeValue(chunk);
-        await new Promise(resolve => setTimeout(resolve, 20));
+        await new Promise(resolve => setTimeout(resolve, 5));
       }
 
-      // 5. 走紙 5 行後切紙，確保最下方的總金額完整印出
-      await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x64, 0x05]));
+      // 5. 走紙 4 行後切紙
+      await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x64, 0x04]));
       await printCharacteristic.writeValue(new Uint8Array([0x1D, 0x56, 0x01]));
 
     } catch (err) {
