@@ -169,6 +169,29 @@
 </div>
 
 <script>
+  // 💡 防止手機螢幕自動關閉（螢幕常亮機制）
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('💡 螢幕常亮模式已啟動');
+    }
+  } catch (err) {
+    console.warn('螢幕常亮設定失敗:', err.message);
+  }
+}
+
+// 當頁面重新顯示時自動重新申請 Wake Lock
+document.addEventListener('visibilitychange', async () => {
+  if (wakeLock !== null && document.visibilityState === 'visible') {
+    await requestWakeLock();
+  }
+});
+
+// 網頁載入時啟動
+requestWakeLock();
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec";
 
   let isOpenState = true;
