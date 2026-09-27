@@ -60,21 +60,23 @@
     .date-range-group { display: flex; gap: 10px; align-items: center; }
     .btn-save-announcement { width: 100%; padding: 12px; background: #ff8c00; border: none; border-radius: 6px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
 
-   /* 🖼️ 58mm 最佳大字體與備註強調樣式 */
+   /* 🖼️ 58mm 細明體超清晰大字型範本 */
     #print-receipt-template {
       position: absolute; left: -9999px; top: -9999px;
       width: 384px; background: #ffffff; color: #000000;
-      padding: 10px 10px 35px 10px; /* 10px 邊距放大列印區域 */
+      padding: 10px 8px 35px 8px;
       box-sizing: border-box;
-      font-family: "Microsoft JhengHei", "黑體-繁", sans-serif;
+      /* 💡 使用新細明體/明體，避免筆畫過厚黏在一起 */
+      font-family: "PMingLiU", " MingLiU", "標楷體", "Times New Roman", serif;
+      -webkit-font-smoothing: none; /* 關閉 iOS 軟化邊緣，讓邊界更銳利 */
     }
-    .receipt-title { text-align: center; font-size: 28px; font-weight: 900; margin-bottom: 4px; }
-    .receipt-sub { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 8px; }
-    .receipt-divider { border-top: 3px dashed #000; margin: 8px 0; }
-    .receipt-row { font-size: 24px; font-weight: 900; margin-bottom: 6px; word-break: break-all; }
-    .receipt-items { font-size: 26px; font-weight: 900; line-height: 1.45; white-space: pre-wrap; margin: 10px 0; word-break: break-all; }
-    .receipt-remark { font-size: 25px; font-weight: 900; margin: 8px 0; background-color: #000; color: #fff; padding: 4px 6px; border-radius: 4px; word-break: break-all; }
-    .receipt-total { font-size: 28px; font-weight: 900; text-align: right; margin-top: 10px; margin-bottom: 10px; }
+    .receipt-title { text-align: center; font-size: 32px; font-weight: bold; margin-bottom: 4px; }
+    .receipt-sub { text-align: center; font-size: 22px; font-weight: normal; margin-bottom: 8px; }
+    .receipt-divider { border-top: 2px dashed #000; margin: 8px 0; }
+    .receipt-row { font-size: 26px; font-weight: normal; margin-bottom: 6px; word-break: break-all; }
+    .receipt-items { font-size: 28px; font-weight: bold; line-height: 1.4; white-space: pre-wrap; margin: 10px 0; word-break: break-all; }
+    .receipt-remark { font-size: 26px; font-weight: bold; margin: 8px 0; border: 2px solid #000; padding: 4px 6px; border-radius: 4px; word-break: break-all; }
+    .receipt-total { font-size: 30px; font-weight: bold; text-align: right; margin-top: 10px; margin-bottom: 10px; }
   </style>
 </head>
 <body>
@@ -244,7 +246,7 @@ requestWakeLock();
     }
   }
 
-// 🖼️ 58mm 高速大字體列印（自動過濾切法偏好列、醒目顯示訂單備註）
+// 🖼️ 58mm 高清細明體圖片列印
   async function printOrder(o) {
     if (!printCharacteristic) {
       alert("⚠️ 請先連接藍芽出單機！");
@@ -252,7 +254,7 @@ requestWakeLock();
     }
 
     try {
-      // 1. 填入基本資料
+      // 1. 填入資料
       document.getElementById("pr-orderId").innerText = "單號：" + (o.orderId || o.orderNo || "#000");
       document.getElementById("pr-time").innerText = "時間：" + (o.orderTime || o.time || "");
       document.getElementById("pr-name").innerText = "姓名：" + (o.name || "顧客");
@@ -276,9 +278,13 @@ requestWakeLock();
         remarkEl.style.display = "none";
       }
 
-      // 4. 將 HTML 轉為 Canvas 圖片 (scale: 1 點對點極速)
+      // 4. 將 HTML 轉為 Canvas 圖片 (scale: 1，確保 1:1 銳利度)
       const tpl = document.getElementById("print-receipt-template");
-      const canvas = await html2canvas(tpl, { scale: 1, backgroundColor: "#ffffff" });
+      const canvas = await html2canvas(tpl, { 
+        scale: 1, 
+        backgroundColor: "#ffffff",
+        logging: false
+      });
       const ctx = canvas.getContext("2d");
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
@@ -304,7 +310,8 @@ requestWakeLock();
       alert("⚠️ 出單列印失敗：" + err.message);
     }
   }
-  // 💡 點陣圖轉換演算法 (Canvas RGBA -> ESC/POS Raster Monochromatic)
+
+  // 💡 優化後的黑白二值化（提高銳利度，減少邊緣糊邊）
   function convertCanvasToEscPosRaster(imgData) {
     const width = imgData.width;
     const height = imgData.height;
@@ -312,7 +319,6 @@ requestWakeLock();
     const pixels = imgData.data;
 
     const commandList = [];
-    // GS v 0 模式 (點陣圖片列印)
     commandList.push(0x1D, 0x76, 0x30, 0, widthBytes & 0xFF, (widthBytes >> 8) & 0xFF, height & 0xFF, (height >> 8) & 0xFF);
 
     for (let y = 0; y < height; y++) {
@@ -326,10 +332,11 @@ requestWakeLock();
             const g = pixels[idx + 1];
             const b = pixels[idx + 2];
             const alpha = pixels[idx + 3];
-            // 灰階二值化 (計算黑白點)
+            
+            // 灰階二值化：將判定標準調為 200，讓文字邊緣筆畫更乾淨俐落
             const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
-            if (alpha > 128 && luminance < 160) {
-              byteVal |= (0x80 >> bit); // 設定為黑色點
+            if (alpha > 128 && luminance < 200) {
+              byteVal |= (0x80 >> bit);
             }
           }
         }
