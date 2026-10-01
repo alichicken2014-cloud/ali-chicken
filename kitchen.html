@@ -33,13 +33,16 @@
 
     .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
     .order-card { background: #27293d; border-radius: 10px; padding: 15px; border-left: 6px solid #ff8c00; position: relative; }
+    .order-card.ready-status { border-left-color: #ffc107; } /* 待取餐時顯示黃邊 */
     
     .order-header { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; border-bottom: 1px solid #3f4260; padding-bottom: 8px; margin-bottom: 8px; }
     .order-info { font-size: 14px; color: #bbb; margin-bottom: 8px; }
     .items-box { background: #1e1e2f; padding: 10px; border-radius: 6px; font-size: 16px; font-weight: bold; color: #00ffcc; white-space: pre-wrap; margin-bottom: 10px; }
-    .order-actions { display: flex; gap: 8px; }
-    .action-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; }
+    .order-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .action-btn { flex: 1; min-width: 75px; padding: 10px 6px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; font-size: 13px; }
     .btn-print { background: #17a2b8; }
+    .btn-ready { background: #ff9800; }
+    .btn-notified { background: #6c757d; cursor: not-allowed; }
     .btn-finish { background: #28a745; }
 
     .menu-mgmt-table { width: 100%; border-collapse: collapse; background: #27293d; border-radius: 10px; overflow: hidden; }
@@ -60,13 +63,11 @@
     .date-range-group { display: flex; gap: 10px; align-items: center; }
     .btn-save-announcement { width: 100%; padding: 12px; background: #ff8c00; border: none; border-radius: 6px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
 
-  /* 🖼️ 58mm 高清細明體/明體範本（強制細線條、防膨脹） */
     #print-receipt-template {
       position: absolute; left: -9999px; top: -9999px;
       width: 384px; background: #ffffff; color: #000000;
       padding: 10px 10px 35px 10px;
       box-sizing: border-box;
-      /* 💡 包含 iOS 原生明體/宋體 (Songti TC / STSong)，避免退回粗黑體 */
       font-family: "MingLiU", " PMingLiU", "Songti TC", "STSong", "標楷體", serif;
       -webkit-font-smoothing: antialiased;
     }
@@ -81,7 +82,6 @@
 </head>
 <body>
 
-<!-- 🖼️ 58mm 熱感應圖片生成隱藏容器（移除切法偏好，強調備註） -->
 <div id="print-receipt-template">
   <div class="receipt-title">阿力香雞排 崑山店</div>
   <div class="receipt-sub">【廚房點餐單】</div>
@@ -171,7 +171,6 @@
 </div>
 
 <script>
-  // 💡 防止手機螢幕自動關閉（螢幕常亮機制）
 let wakeLock = null;
 
 async function requestWakeLock() {
@@ -185,15 +184,14 @@ async function requestWakeLock() {
   }
 }
 
-// 當頁面重新顯示時自動重新申請 Wake Lock
 document.addEventListener('visibilitychange', async () => {
   if (wakeLock !== null && document.visibilityState === 'visible') {
     await requestWakeLock();
   }
 });
 
-// 網頁載入時啟動
 requestWakeLock();
+
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec";
 
   let isOpenState = true;
@@ -246,7 +244,6 @@ requestWakeLock();
     }
   }
 
-// 🖼️ 58mm 高清細明體圖片列印
   async function printOrder(o) {
     if (!printCharacteristic) {
       alert("⚠️ 請先連接藍芽出單機！");
@@ -254,13 +251,11 @@ requestWakeLock();
     }
 
     try {
-      // 1. 填入資料
       document.getElementById("pr-orderId").innerText = "單號：" + (o.orderId || o.orderNo || "#000");
       document.getElementById("pr-time").innerText = "時間：" + (o.orderTime || o.time || "");
       document.getElementById("pr-name").innerText = "姓名：" + (o.name || "顧客");
       document.getElementById("pr-phone").innerText = "電話：" + (o.phone || "");
 
-      // 2. 整理品項明細（自動移除【切法/偏好】文字）
       let cleanItemsDetail = (o.itemsDetail || "")
         .split('\n')
         .filter(line => !line.includes("【切法/偏好】"))
@@ -269,7 +264,6 @@ requestWakeLock();
       document.getElementById("pr-items").innerText = cleanItemsDetail;
       document.getElementById("pr-total").innerText = "總金額：$" + (o.totalPrice || 0) + " 元";
 
-      // 3. 處理「訂單備註」區塊
       const remarkEl = document.getElementById("pr-remark");
       if (o.remark && o.remark.trim() !== "" && o.remark !== "無") {
         remarkEl.innerText = "📝 備註：" + o.remark;
@@ -278,7 +272,6 @@ requestWakeLock();
         remarkEl.style.display = "none";
       }
 
-      // 4. 將 HTML 轉為 Canvas 圖片 (scale: 1，確保 1:1 銳利度)
       const tpl = document.getElementById("print-receipt-template");
       const canvas = await html2canvas(tpl, { 
         scale: 1, 
@@ -288,11 +281,9 @@ requestWakeLock();
       const ctx = canvas.getContext("2d");
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      // 5. 轉為 ESC/POS 點陣圖 Command
       const escPosBytes = convertCanvasToEscPosRaster(imgData);
 
-      // 6. 高速發送至印表機
-      await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x40])); // 初始化
+      await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x40]));
 
       const chunkSize = 128;
       for (let i = 0; i < escPosBytes.length; i += chunkSize) {
@@ -301,7 +292,6 @@ requestWakeLock();
         await new Promise(resolve => setTimeout(resolve, 5));
       }
 
-      // 7. 走紙 4 行後切紙
       await printCharacteristic.writeValue(new Uint8Array([0x1B, 0x64, 0x04]));
       await printCharacteristic.writeValue(new Uint8Array([0x1D, 0x56, 0x01]));
 
@@ -311,7 +301,6 @@ requestWakeLock();
     }
   }
 
-  // 💡 細線條優化二值化（將臨界值調低至 140，收縮筆畫膨脹，呈現纖細清晰字體）
   function convertCanvasToEscPosRaster(imgData) {
     const width = imgData.width;
     const height = imgData.height;
@@ -333,7 +322,6 @@ requestWakeLock();
             const b = pixels[idx + 2];
             const alpha = pixels[idx + 3];
             
-            // 💡 臨界值改為 140：只有真正偏黑的像素才渲染為黑點，徹底解決字體糊成粗體的問題
             const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
             if (alpha > 128 && luminance < 140) {
               byteVal |= (0x80 >> bit);
@@ -404,8 +392,10 @@ requestWakeLock();
     }
 
     orders.forEach(order => {
+      const isReady = (order.status === "可取餐");
       const card = document.createElement("div");
-      card.className = "order-card";
+      card.className = `order-card ${isReady ? 'ready-status' : ''}`;
+      
       card.innerHTML = `
         <div class="order-header">
           <span>${order.orderId} - ${order.name}</span>
@@ -415,12 +405,44 @@ requestWakeLock();
         <div class="items-box">${order.itemsDetail}</div>
         ${order.remark ? `<div class="order-info" style="color:#ff4757;">📝 備註：${order.remark}</div>` : ''}
         <div class="order-actions">
-          <button class="action-btn btn-print" onclick='printOrder(${JSON.stringify(order)})'>🖨️ 補印單據</button>
-          <button class="action-btn btn-finish" onclick="updateOrderStatus(${order.row}, '已完成')">✅ 完成出餐</button>
+          <button class="action-btn btn-print" onclick='printOrder(${JSON.stringify(order)})'>🖨️ 補印</button>
+          
+          ${isReady ? 
+            `<button class="action-btn btn-notified" disabled>🔔 已通知</button>` : 
+            `<button class="action-btn btn-ready" onclick='notifyReady(${order.row}, "${order.orderId}", "${order.lineUserId || ''}")'>🔔 餐點好了</button>`
+          }
+          
+          <button class="action-btn btn-finish" onclick="updateOrderStatus(${order.row}, '已完成')">✅ 完成</button>
         </div>
       `;
       container.appendChild(card);
     });
+  }
+
+  // 💡 發送「餐點好了」通知並更新狀態
+  async function notifyReady(row, orderId, lineUserId) {
+    if (!lineUserId) {
+      if (!confirm("⚠️ 該訂單無 LINE UID，將僅切換狀態為『可取餐』，無法發送 LINE 訊息。是否繼續？")) {
+        return;
+      }
+    }
+    
+    try {
+      await fetch(GAS_URL, {
+        method: "POST",
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ 
+          action: "notifyOrderReady", 
+          row: row, 
+          orderId: orderId,
+          lineUserId: lineUserId 
+        })
+      });
+      speakText(`單號 ${orderId.replace('#', '')} 已發送取餐通知`);
+      fetchKitchenData();
+    } catch (err) {
+      alert("⚠️ 通知發送失敗：" + err.message);
+    }
   }
 
   function renderMenuMgmt() {
