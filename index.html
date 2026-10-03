@@ -121,52 +121,47 @@
 
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzMymZbWTF0FlAQKB2FtLQ5SNnG7-4dRlEklVnMN-pZ4wNzXUYaUJAXOknoWtccrk5Ebg/exec";
-  const MY_LIFF_ID = "2011276802-mdrsLFND"; // 👈 已設定您的 LIFF ID
+  const MY_LIFF_ID = "2011276802-mdrsLFND";
 
   let cart = [];
   let rawMenuData = [];
   let currentCategory = "全部";
   let isOpenState = true;
   let tempSelectedItem = null;
-  let lineUserId = ""; // 存放自動取得的 LINE ID
+  let lineUserId = "";
 
-  // 💡 強化版的 LIFF 載入與 userId 抓取邏輯
-async function initLiff() {
-  const urlParams = new URLSearchParams(window.location.search);
-  
-  // 1. 優先從網址參數抓取 (若有帶入 ?userId=... 或 ?liff.state=...)
-  lineUserId = urlParams.get('userId') || urlParams.get('lineId') || '';
+  async function initLiff() {
+    const urlParams = new URLSearchParams(window.location.search);
+    lineUserId = urlParams.get('userId') || urlParams.get('lineId') || '';
 
-  try {
-    if (typeof liff !== "undefined" && MY_LIFF_ID) {
-      await liff.init({ liffId: MY_LIFF_ID });
-      
-      // 2. 如果未登入且在 LINE App 內，自動引導登入
-      if (!liff.isLoggedIn()) {
-        if (liff.isInClient()) {
-          liff.login();
-          return;
-        }
-      } else {
-        // 3. 成功取得 Profile 資訊
-        const profile = await liff.getProfile();
-        if (profile && profile.userId) {
-          lineUserId = profile.userId; // 取得正式 LINE UID
-        }
+    try {
+      if (typeof liff !== "undefined" && MY_LIFF_ID) {
+        await liff.init({ liffId: MY_LIFF_ID });
+        
+        if (!liff.isLoggedIn()) {
+          if (liff.isInClient()) {
+            liff.login();
+            return;
+          }
+        } else {
+          const profile = await liff.getProfile();
+          if (profile && profile.userId) {
+            lineUserId = profile.userId;
+          }
 
-        // 自動帶入姓名
-        const nameInput = document.getElementById("cust-name");
-        if (nameInput && !nameInput.value && profile.displayName) {
-          nameInput.value = profile.displayName;
+          const nameInput = document.getElementById("cust-name");
+          if (nameInput && !nameInput.value && profile.displayName) {
+            nameInput.value = profile.displayName;
+          }
         }
       }
+    } catch (err) {
+      console.warn("LIFF 初始化備援模式:", err);
     }
-  } catch (err) {
-    console.warn("LIFF 初始化備援模式:", err);
+    
+    console.log("當前綁定 LINE UserId:", lineUserId);
   }
-  
-  console.log("當前綁定 LINE UserId:", lineUserId);
-}
+
   async function initData() {
     try {
       const res = await fetch(`${GAS_URL}?action=getMenu`);
@@ -240,24 +235,29 @@ async function initLiff() {
     });
   }
 
+  // 💡 修改處 1：加入「三角骨」判斷，讓三角骨也能開啟彈窗
   function handleItemClick(item) {
     const isChicken = item.name.includes("雞排");
+    const isTriangleBone = item.name.includes("三角骨");
     const isFries = item.name.includes("薯條") || item.name.includes("甘梅薯條") || item.name.includes("地瓜");
 
-    if (isChicken || isFries) {
+    if (isChicken || isTriangleBone || isFries) {
       tempSelectedItem = item;
-      showCustomModal(item, isChicken, isFries);
+      showCustomModal(item, isChicken, isTriangleBone, isFries);
     } else {
       addToCart(item.name, item.price, "");
     }
   }
 
-  function showCustomModal(item, isChicken, isFries) {
+  // 💡 修改處 2：調整彈窗內容，點選雞排或三角骨時渲染「不裹粉」選項
+  function showCustomModal(item, isChicken, isTriangleBone, isFries) {
     document.getElementById("modal-item-name").innerText = item.name;
     const container = document.getElementById("modal-options-container");
     container.innerHTML = "";
 
     let html = "";
+    
+    // 1. 只有雞排才有切法選項
     if (isChicken) {
       html += `
         <label style="font-weight:bold; display:block; margin-bottom:6px;">✂️ 是否要切：</label>
@@ -268,6 +268,18 @@ async function initLiff() {
       `;
     }
 
+    // 2. 雞排 或 三角骨 顯示「裹粉/不裹粉」選項
+    if (isChicken || isTriangleBone) {
+      html += `
+        <label style="font-weight:bold; display:block; margin-bottom:6px;">🍗 裹粉選項：</label>
+        <div class="radio-group" style="margin-bottom:12px;">
+          <input type="radio" name="m-flour" id="mf1" value="正常" checked><label for="mf1" class="radio-label">正常</label>
+          <input type="radio" name="m-flour" id="mf2" value="不裹粉"><label for="mf2" class="radio-label">不裹粉</label>
+        </div>
+      `;
+    }
+
+    // 3. 調味選項
     html += `
       <label style="font-weight:bold; display:block; margin-bottom:6px;">🌶️ 指定調味：</label>
       <div class="radio-group">
@@ -290,14 +302,17 @@ async function initLiff() {
     tempSelectedItem = null;
   }
 
+  // 💡 修改處 3：確認加入購物車時，若勾選「不裹粉」會一併寫入品項備註
   function confirmCustomItem() {
     if (!tempSelectedItem) return;
 
     let noteArr = [];
     const cutEl = document.querySelector('input[name="m-cut"]:checked');
+    const flourEl = document.querySelector('input[name="m-flour"]:checked');
     const spiceEl = document.querySelector('input[name="m-spice"]:checked');
 
     if (cutEl) noteArr.push(cutEl.value);
+    if (flourEl && flourEl.value === "不裹粉") noteArr.push(flourEl.value);
     if (spiceEl && spiceEl.value !== "隨整包") noteArr.push(spiceEl.value);
 
     const customNote = noteArr.length > 0 ? `(${noteArr.join('/')})` : "";
@@ -437,7 +452,7 @@ async function initLiff() {
       itemsDetail: itemsDetail,
       totalPrice: totalVal,
       remark: remark,
-      userId: lineUserId // 👈 自動帶入 LIFF 取得的 userId
+      userId: lineUserId
     };
 
     const submitBtn = document.getElementById("submit-btn");
@@ -459,7 +474,6 @@ async function initLiff() {
         updateCartUI();
         document.getElementById("cust-remark").value = "";
         
-        // 若在 LIFF 內開啟，送單後可自動關閉 LIFF 視窗
         if (typeof liff !== "undefined" && liff.isInClient()) {
           liff.closeWindow();
         }
@@ -478,7 +492,6 @@ async function initLiff() {
     }
   }
 
-  // 執行 LIFF 初始化與菜單載入
   initLiff();
   initData();
 </script>
