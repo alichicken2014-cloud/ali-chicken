@@ -32,12 +32,15 @@
     .badge { position: absolute; top: -6px; right: -6px; background: #e67e22; color: white; border-radius: 50%; width: 24px; height: 24px; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
     .cart-summary { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
-    .cart-summary h3 { margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; color: #333; display: flex; justify-content: space-between; align-items: center; }
-    .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; font-size: 14px; }
+    .cart-summary h3 { margin: 0 0 10px 0; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 8px; color: #333; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* 💡 字體放大設定 */
+    .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #f0f0f0; }
+    .cart-item-detail { color: #666; font-size: 15px; margin-top: 3px; }
     
     .cart-controls { display: flex; align-items: center; gap: 6px; }
-    .cart-btn-qty { background: #e67e22; color: white; border: none; border-radius: 4px; width: 26px; height: 26px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    .cart-btn-del { background: #dc3545; color: white; border: none; border-radius: 4px; width: 26px; height: 26px; font-size: 12px; cursor: pointer; margin-left: 4px; }
+    .cart-btn-qty { background: #e67e22; color: white; border: none; border-radius: 4px; width: 30px; height: 30px; font-size: 18px; font-weight: bold; cursor: pointer; }
+    .cart-btn-del { background: #dc3545; color: white; border: none; border-radius: 4px; width: 30px; height: 30px; font-size: 14px; cursor: pointer; margin-left: 4px; }
 
     .form-group { background: white; padding: 18px 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
     .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #222; font-size: 16px; }
@@ -77,7 +80,7 @@
 <div class="menu-section" id="menu-container"></div>
 
 <div class="cart-summary" id="cart-summary-box" style="display: none;">
-  <h3>🛒 已選餐點明細 <button style="font-size: 12px; background: none; border: none; color: #dc3545; cursor: pointer;" onclick="clearCart()">清空購物車</button></h3>
+  <h3>🛒 已選餐點明細 <button style="font-size: 13px; background: none; border: none; color: #dc3545; cursor: pointer;" onclick="clearCart()">清空購物車</button></h3>
   <div id="cart-items-list"></div>
 </div>
 
@@ -235,7 +238,6 @@
     });
   }
 
-  // 💡 修改處 1：加入「三角骨」判斷，讓三角骨也能開啟彈窗
   function handleItemClick(item) {
     const isChicken = item.name.includes("雞排");
     const isTriangleBone = item.name.includes("三角骨");
@@ -249,7 +251,6 @@
     }
   }
 
-  // 💡 修改處 2：調整彈窗內容，點選雞排或三角骨時渲染「不裹粉」選項
   function showCustomModal(item, isChicken, isTriangleBone, isFries) {
     document.getElementById("modal-item-name").innerText = item.name;
     const container = document.getElementById("modal-options-container");
@@ -257,7 +258,6 @@
 
     let html = "";
     
-    // 1. 只有雞排才有切法選項
     if (isChicken) {
       html += `
         <label style="font-weight:bold; display:block; margin-bottom:6px;">✂️ 是否要切：</label>
@@ -268,7 +268,6 @@
       `;
     }
 
-    // 2. 雞排 或 三角骨 顯示「裹粉/不裹粉」選項
     if (isChicken || isTriangleBone) {
       html += `
         <label style="font-weight:bold; display:block; margin-bottom:6px;">🍗 裹粉選項：</label>
@@ -279,7 +278,6 @@
       `;
     }
 
-    // 3. 調味選項
     html += `
       <label style="font-weight:bold; display:block; margin-bottom:6px;">🌶️ 指定調味：</label>
       <div class="radio-group">
@@ -302,7 +300,6 @@
     tempSelectedItem = null;
   }
 
-  // 💡 修改處 3：確認加入購物車時，若勾選「不裹粉」會一併寫入品項備註
   function confirmCustomItem() {
     if (!tempSelectedItem) return;
 
@@ -360,6 +357,7 @@
     }
   }
 
+  // 💡 修改處：加入 1. 2. 3. 項次編號與放大字體
   function updateCartUI() {
     let total = 0;
     const cartBox = document.getElementById("cart-summary-box");
@@ -376,12 +374,12 @@
         row.className = "cart-item-row";
         row.innerHTML = `
           <div>
-            <div style="font-weight:bold;">${item.fullName}</div>
-            <div style="color:#888; font-size:13px;">$${item.price} × ${item.qty} = $${itemSubtotal}</div>
+            <div style="font-weight:bold; font-size:18px;">${index + 1}. ${item.fullName}</div>
+            <div class="cart-item-detail">$${item.price} × ${item.qty} = $${itemSubtotal}</div>
           </div>
           <div class="cart-controls">
             <button class="cart-btn-qty" onclick="decreaseCartItem(${index})">-</button>
-            <span style="font-weight:bold; min-width:20px; text-align:center;">${item.qty}</span>
+            <span style="font-weight:bold; min-width:24px; text-align:center; font-size:18px;">${item.qty}</span>
             <button class="cart-btn-qty" onclick="increaseCartItem(${index})">+</button>
             <button class="cart-btn-del" onclick="removeCartItem(${index})">🗑️</button>
           </div>
@@ -440,7 +438,8 @@
       return;
     }
 
-    const itemsDetail = cart.map(c => `${c.fullName} x${c.qty}`).join("\n");
+    // 💡 修改處：傳送給 GAS 的字串前加入數字編號
+    const itemsDetail = cart.map((c, idx) => `${idx + 1}. ${c.fullName} x${c.qty}`).join("\n");
     const spice = document.querySelector('input[name="spice"]:checked').value;
 
     const payload = {
