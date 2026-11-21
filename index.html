@@ -34,7 +34,6 @@
     .cart-summary { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
     .cart-summary h3 { margin: 0 0 10px 0; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 8px; color: #333; display: flex; justify-content: space-between; align-items: center; }
     
-    /* 💡 字體放大設定 */
     .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #f0f0f0; }
     .cart-item-detail { color: #666; font-size: 15px; margin-top: 3px; }
     
@@ -357,7 +356,6 @@
     }
   }
 
-  // 💡 修改處：加入 1. 2. 3. 項次編號與放大字體
   function updateCartUI() {
     let total = 0;
     const cartBox = document.getElementById("cart-summary-box");
@@ -419,6 +417,20 @@
     }
   }
 
+  function buildLineOrderMessage(orderId, name, spice, remark, itemsDetail, totalVal) {
+    let msg = `🍗【阿力香雞排 崑山店】點餐確認\n`;
+    msg += `━━━━━━━━━━━━━━\n`;
+    if (orderId) msg += `🎫 取單號碼：${orderId}\n`;
+    msg += `👤 訂購人：${name}\n`;
+    msg += `🌶️ 整包調味：${spice}\n`;
+    if (remark) msg += `📝 備註：${remark}\n`;
+    msg += `━━━━━━━━━━━━━━\n`;
+    msg += `📋 餐點明細：\n${itemsDetail}\n`;
+    msg += `━━━━━━━━━━━━━━\n`;
+    msg += `💰 總金額：$${totalVal}`;
+    return msg;
+  }
+
   async function submitOrder() {
     const name = document.getElementById("cust-name").value.trim();
     const phone = document.getElementById("cust-phone").value.trim();
@@ -438,7 +450,6 @@
       return;
     }
 
-    // 💡 修改處：傳送給 GAS 的字串前加入數字編號
     const itemsDetail = cart.map((c, idx) => `${idx + 1}. ${c.fullName} x${c.qty}`).join("\n");
     const spice = document.querySelector('input[name="spice"]:checked').value;
 
@@ -468,14 +479,33 @@
       const result = await response.json();
 
       if (result.status === "success") {
-        alert(`🎉 訂單成功送出！\n您的取單號碼：${result.orderId}\n請至現場報號取餐！`);
+        const orderId = result.orderId || "";
+        const lineMsg = buildLineOrderMessage(orderId, name, spice, remark, itemsDetail, totalVal);
+
         cart = [];
         updateCartUI();
         document.getElementById("cust-remark").value = "";
-        
-        if (typeof liff !== "undefined" && liff.isInClient()) {
-          liff.closeWindow();
+
+        if (typeof liff !== "undefined" && liff.isInClient() && liff.isLoggedIn()) {
+          try {
+            await liff.sendMessages([
+              {
+                type: "text",
+                text: lineMsg
+              }
+            ]);
+            alert(`🎉 訂單成功送出！\n取單號碼：${orderId}\n餐點明細已傳送至您的 LINE 聊天室！`);
+            liff.closeWindow();
+            return;
+          } catch (liffErr) {
+            console.warn("LIFF 自動傳送訊息失敗:", liffErr);
+            alert(`🎉 訂單成功送出！\n取單號碼：${orderId}\n（若未自動帶入聊天室，請確認 LIFF 已開啟 chat_message.write 權限）`);
+            liff.closeWindow();
+            return;
+          }
         }
+
+        alert(`🎉 訂單成功送出！\n您的取單號碼：${orderId}\n請至現場報號取餐！`);
       } else {
         alert("⚠️ 送出失敗：" + (result.message || "系統繁忙，請稍後再試。"));
       }
